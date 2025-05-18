@@ -13,7 +13,7 @@
   <body>
     <div id="app">
       <header>
-        <h1>Edtho Notepad</h1>
+        <h1>എടുത്തോ..😌!</h1>
         <div class="controls">
           <button id="newNote" class="btn primary">New Note</button>
           <button id="saveNote" class="btn success">Save</button>
@@ -23,6 +23,7 @@
       <main>
         <div id="status" class="status"></div>
         <div class="editor-container">
+          <div id="lineCount" class="line-count">0/1500</div>
           <textarea
             id="noteContent"
             placeholder="Start typing your note here..."
@@ -33,6 +34,7 @@
           <div class="option-group">
             <label for="customPath">Custom URL (optional):</label>
             <input type="text" id="customPath" placeholder="Enter custom URL" />
+            <button id="updateSlugBtn" class="btn">Update URL</button>
           </div>
 
           <div class="option-group">

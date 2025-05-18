@@ -184,3 +184,11 @@ input:focus {
     min-height: 300px;
   }
 }
+
+.line-count {
+  font-size: 14px;
+  color: #888;
+  margin-bottom: 5px;
+  text-align: right;
+  padding-right: 10px;
+}

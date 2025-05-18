@@ -12,6 +12,7 @@ const cors = require("cors");
 const logger = require("./config/logger");
 const app = express();
 const port = process.env.PORT || 3000;
+const cron = require("node-cron");
 
 // Security middleware
 app.use(
@@ -39,6 +40,7 @@ const apiLimiter = rateLimit({
 app.use(compression());
 app.use(cors());
 app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: "5mb" }));
 app.use(express.static("public"));
 
 // Database connection
@@ -252,6 +254,42 @@ app.put("/api/notes/:id", (req, res) => {
     }
   );
 });
+// Update note slug (custom URL)
+app.put("/api/notes/:id/slug", (req, res) => {
+  const { id } = req.params;
+  const { newSlug } = req.body;
+
+  if (!validateId(id) || !validateId(newSlug)) {
+    return res.status(400).json({ error: "Invalid ID format" });
+  }
+
+  // Check if newSlug already exists
+  db.query("SELECT id FROM notes WHERE id = ?", [newSlug], (err, results) => {
+    if (err) {
+      console.error("Error checking slug:", err);
+      return res.status(500).json({ error: "Server error" });
+    }
+    if (results.length > 0) {
+      return res.status(400).json({ error: "Custom URL already taken" });
+    }
+
+    // Update the note's ID (slug)
+    db.query(
+      "UPDATE notes SET id = ? WHERE id = ?",
+      [newSlug, id],
+      (err, result) => {
+        if (err) {
+          console.error("Error updating slug:", err);
+          return res.status(500).json({ error: "Failed to update slug" });
+        }
+        if (result.affectedRows === 0) {
+          return res.status(404).json({ error: "Note not found" });
+        }
+        res.json({ success: true, newSlug });
+      }
+    );
+  });
+});
 
 // Set note password
 app.post("/api/notes/:id/password", async (req, res) => {
@@ -415,6 +453,22 @@ process.on("SIGTERM", () => {
 // Start server
 const server = app.listen(port, () => {
   logger.info(`Server is running on port ${port}`);
+});
+
+// Run every day at 4 AM
+cron.schedule("0 4 * * *", () => {
+  db.query(
+    "DELETE FROM notes WHERE content IS NULL OR TRIM(content) = ''",
+    (err, result) => {
+      if (err) {
+        console.error("Cronjob error deleting empty notes:", err);
+      } else {
+        console.log(
+          `Cronjob: Deleted ${result.affectedRows} empty notes at 4 AM`
+        );
+      }
+    }
+  );
 });
 
 module.exports = app; // For testing

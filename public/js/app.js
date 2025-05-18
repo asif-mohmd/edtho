@@ -1,3 +1,4 @@
+const MAX_LINES = 1500;
 document.addEventListener("DOMContentLoaded", () => {
   const noteContent = document.getElementById("noteContent");
   const customPath = document.getElementById("customPath");
@@ -8,11 +9,60 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let currentNoteId = null;
 
+  function enforceLineLimit() {
+    let lines = noteContent.value.split("\n");
+    if (lines.length > MAX_LINES) {
+      noteContent.value = lines.slice(0, MAX_LINES).join("\n");
+      showStatus(
+        `Maximum ${MAX_LINES} lines allowed. Extra lines have been removed.`,
+        "error"
+      );
+    }
+  }
+
+  noteContent.addEventListener("input", enforceLineLimit);
+  noteContent.addEventListener("paste", function (e) {
+    // Wait for paste to complete, then enforce
+    setTimeout(enforceLineLimit, 0);
+  });
+
+  const updateSlugBtn = document.getElementById("updateSlugBtn");
+
+  updateSlugBtn.addEventListener("click", async () => {
+    const newSlug = customPath.value.trim();
+    if (!newSlug) {
+      showStatus("Please enter a custom URL.", "error");
+      return;
+    }
+    if (!currentNoteId) {
+      showStatus("No note loaded to update.", "error");
+      return;
+    }
+    try {
+      const response = await fetch(`/api/notes/${currentNoteId}/slug`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newSlug }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to update URL");
+      }
+      currentNoteId = newSlug;
+      window.history.pushState({}, "", `/${newSlug}`);
+      showStatus("Custom URL updated!", "success");
+    } catch (error) {
+      showStatus(error.message, "error");
+    }
+  });
   // Check if we're viewing an existing note
   const pathParts = window.location.pathname.split("/");
   if (pathParts.length > 1 && pathParts[1]) {
     currentNoteId = pathParts[1];
     loadNote(currentNoteId);
+  } else {
+    // No slug: create a new note and redirect to its URL
+    autoCreateNote();
   }
 
   // Event Listeners
@@ -21,12 +71,44 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Functions
   async function createNewNote() {
-    currentNoteId = null;
-    noteContent.value = "";
-    customPath.value = "";
-    notePassword.value = "";
-    window.history.pushState({}, "", "/");
-    showStatus("New note created", "success");
+    // Immediately create a new note with empty content and redirect to its slug
+    try {
+      const response = await fetch("/api/notes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ content: "" }),
+      });
+      const result = await response.json();
+      if (response.ok && result.id) {
+        window.location.replace(`/${result.id}`);
+      } else {
+        showStatus(result.error || "Failed to create note", "error");
+      }
+    } catch (error) {
+      showStatus("Failed to create note", "error");
+    }
+  }
+
+  async function autoCreateNote() {
+    try {
+      const response = await fetch("/api/notes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ content: "" }),
+      });
+      const result = await response.json();
+      if (response.ok && result.id) {
+        window.location.replace(`/${result.id}`);
+      } else {
+        showStatus(result.error || "Failed to create note", "error");
+      }
+    } catch (error) {
+      showStatus("Failed to create note", "error");
+    }
   }
 
   async function saveNote() {
@@ -110,7 +192,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         noteContent.value = data.content;
       }
-
+      updateLineCount();
       showStatus("Note loaded successfully", "success");
     } catch (error) {
       showStatus(error.message, "error");
@@ -140,3 +222,19 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 1500);
   });
 });
+
+const lineCount = document.getElementById("lineCount");
+
+function updateLineCount() {
+  const lines = noteContent.value.split("\n").length;
+  lineCount.textContent = `${lines}/${MAX_LINES}`;
+}
+
+// Update line count on input and paste
+noteContent.addEventListener("input", updateLineCount);
+noteContent.addEventListener("paste", function () {
+  setTimeout(updateLineCount, 0);
+});
+
+// Call once on page load
+updateLineCount();
