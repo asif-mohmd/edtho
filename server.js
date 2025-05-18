@@ -232,10 +232,23 @@ app.put("/api/notes/:id", (req, res) => {
       }
 
       if (result.affectedRows === 0) {
-        return res.status(404).json({ error: "Note not found" });
+        db.query(
+          "Insert INTO notes (id, content) VALUES (?, ?)",
+          [id, content],
+          (err, results) => {
+            if (err) {
+              console.error("Error creating note:", err);
+              return res.status(500).json({ error: "Failed to create note" });
+            }
+            if (results.affectedRows === 0) {
+              return res.status(404).json({ error: "Note not found" });
+            }
+            return res.json({ success: true });
+          }
+        );
+      } else {
+        return res.json({ success: true });
       }
-
-      res.json({ success: true });
     }
   );
 });

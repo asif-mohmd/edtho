@@ -38,3 +38,24 @@
 {"level":"info","message":"Server is running on port 3006","service":"notepad-app","timestamp":"2025-05-18 19:04:52"}
 {"level":"info","message":"Connected to MySQL database","service":"notepad-app","timestamp":"2025-05-18 19:04:52"}
 {"level":"info","message":"Notes table ready","service":"notepad-app","timestamp":"2025-05-18 19:04:52"}
+{"level":"info","message":"Server is running on port 3006","service":"notepad-app","timestamp":"2025-05-18 19:47:42"}
+{"level":"info","message":"Connected to MySQL database","service":"notepad-app","timestamp":"2025-05-18 19:47:42"}
+{"level":"info","message":"Notes table ready","service":"notepad-app","timestamp":"2025-05-18 19:47:42"}
+{"level":"info","message":"Server is running on port 3006","service":"notepad-app","timestamp":"2025-05-18 19:51:57"}
+{"level":"info","message":"Connected to MySQL database","service":"notepad-app","timestamp":"2025-05-18 19:51:57"}
+{"level":"info","message":"Notes table ready","service":"notepad-app","timestamp":"2025-05-18 19:51:57"}
+{"level":"info","message":"Server is running on port 3006","service":"notepad-app","timestamp":"2025-05-18 19:52:55"}
+{"level":"info","message":"Connected to MySQL database","service":"notepad-app","timestamp":"2025-05-18 19:52:55"}
+{"level":"info","message":"Notes table ready","service":"notepad-app","timestamp":"2025-05-18 19:52:55"}
+{"level":"info","message":"Server is running on port 3006","service":"notepad-app","timestamp":"2025-05-18 19:53:50"}
+{"level":"info","message":"Connected to MySQL database","service":"notepad-app","timestamp":"2025-05-18 19:53:50"}
+{"level":"info","message":"Notes table ready","service":"notepad-app","timestamp":"2025-05-18 19:53:50"}
+{"level":"info","message":"Server is running on port 3006","service":"notepad-app","timestamp":"2025-05-18 19:57:43"}
+{"level":"info","message":"Connected to MySQL database","service":"notepad-app","timestamp":"2025-05-18 19:57:43"}
+{"level":"info","message":"Notes table ready","service":"notepad-app","timestamp":"2025-05-18 19:57:43"}
+{"level":"info","message":"Server is running on port 3006","service":"notepad-app","timestamp":"2025-05-18 20:02:53"}
+{"level":"info","message":"Connected to MySQL database","service":"notepad-app","timestamp":"2025-05-18 20:02:53"}
+{"level":"info","message":"Notes table ready","service":"notepad-app","timestamp":"2025-05-18 20:02:53"}
+{"level":"info","message":"Server is running on port 3006","service":"notepad-app","timestamp":"2025-05-18 20:09:47"}
+{"level":"info","message":"Connected to MySQL database","service":"notepad-app","timestamp":"2025-05-18 20:09:47"}
+{"level":"info","message":"Notes table ready","service":"notepad-app","timestamp":"2025-05-18 20:09:47"}
