@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Write - Simple Notepad</title>
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --primary-color: #4285f4;
+            --secondary-color: #f1f3f4;
+            --border-color: #dadce0;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .dark-mode {
+            --bg-color: #202124;
+            --text-color: #e8eaed;
+            --primary-color: #8ab4f8;
+            --secondary-color: #303134;
+            --border-color: #5f6368;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        h1 {
+            font-size: 24px;
+            color: var(--primary-color);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+        }
+
+        #theme-toggle {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .editor-container {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 150px);
+        }
+
+        #editor {
+            flex-grow: 1;
+            padding: 15px;
+            font-size: 16px;
+            resize: none;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            outline: none;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+        }
+
+        .button {
+            padding: 8px 16px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .button:hover {
+            opacity: 0.9;
+        }
+
+        .button.secondary {
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+
+        #url-display {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: var(--secondary-color);
+            border-radius: 4px;
+            display: none;
+        }
+
+        #url-display a {
+            color: var(--primary-color);
+            word-break: break-all;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--bg-color);
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 4px 8px var(--shadow-color);
+        }
+
+        .modal h2 {
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .password-prompt {
+            text-align: center;
+            margin-top: 20%;
+        }
+
+        .password-prompt h2 {
+            margin-bottom: 20px;
+        }
+
+        .password-prompt input {
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 300px;
+            padding: 10px;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Write.com</h1>
+            <div class="header-actions">
+                <button id="theme-toggle" title="Toggle dark/light mode">🌙</button>
+            </div>
+        </header>
+
+        <div id="password-screen" class="password-prompt" style="display: none;">
+            <h2>This note is protected</h2>
+            <input type="password" id="password-input" placeholder="Enter password">
+            <button class="button" id="unlock-button">Unlock</button>
+        </div>
+
+        <div id="editor-view">
+            <div class="editor-container">
+                <textarea id="editor" placeholder="Start writing your note here..."></textarea>
+            </div>
+            
+            <div class="toolbar">
+                <div>
+                    <button id="save-button" class="button">Save Note</button>
+                    <button id="custom-url-button" class="button secondary">Custom URL</button>
+                    <button id="lock-button" class="button secondary">Password Protect</button>
+                </div>
+                <div>
+                    <span id="status"></span>
+                </div>
+            </div>
+            
+            <div id="url-display">
+                Your note is available at: <a id="note-url" href="#" target="_blank"></a>
+            </div>
+        </div>
+    </div>
+
+    <div id="custom-url-modal" class="modal">
+        <div class="modal-content">
+            <h2>Create Custom URL</h2>
+            <div class="form-group">
+                <label for="custom-url-input">Custom URL</label>
+                <div style="display: flex;">
+                    <span style="padding: 8px; background-color: var(--secondary-color); border: 1px solid var(--border-color); border-right: none; border-radius: 4px 0 0 4px;">write.com/</span>
+                    <input type="text" id="custom-url-input" placeholder="yournote">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button id="cancel-custom-url" class="button secondary">Cancel</button>
+                <button id="create-custom-url" class="button">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="lock-modal" class="modal">
+        <div class="modal-content">
+            <h2>Password Protect Note</h2>
+            <div class="form-group">
+                <label for="password-set">Set Password</label>
+                <input type="password" id="password-set" placeholder="Enter password">
+            </div>
+            <div class="form-group">
+                <label for="password-confirm">Confirm Password</label>
+                <input type="password" id="password-confirm" placeholder="Confirm password">
+            </div>
+            <div class="modal-actions">
+                <button id="cancel-lock" class="button secondary">Cancel</button>
+                <button id="confirm-lock" class="button">Protect Note</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const editor = document.getElementById('editor');
+            const saveButton = document.getElementById('save-button');
+            const customUrlButton = document.getElementById('custom-url-button');
+            const lockButton = document.getElementById('lock-button');
+            const themeToggle = document.getElementById('theme-toggle');
+            const urlDisplay = document.getElementById('url-display');
+            const noteUrl = document.getElementById('note-url');
+            const status = document.getElementById('status');
+            const customUrlModal = document.getElementById('custom-url-modal');
+            const customUrlInput = document.getElementById('custom-url-input');
+            const createCustomUrl = document.getElementById('create-custom-url');
+            const cancelCustomUrl = document.getElementById('cancel-custom-url');
+            const lockModal = document.getElementById('lock-modal');
+            const passwordSet = document.getElementById('password-set');
+            const passwordConfirm = document.getElementById('password-confirm');
+            const confirmLock = document.getElementById('confirm-lock');
+            const cancelLock = document.getElementById('cancel-lock');
+            const passwordScreen = document.getElementById('password-screen');
+            const passwordInput = document.getElementById('password-input');
+            const unlockButton = document.getElementById('unlock-button');
+            const editorView = document.getElementById('editor-view');
+
+            let noteId = '';
+            let isPasswordProtected = false;
+            
+            // Check for dark mode preference
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                document.body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+            }
+            
+            // Check URL for note ID
+            const pathSegments = window.location.pathname.split('/');
+            if (pathSegments.length > 1 && pathSegments[1]) {
+                noteId = pathSegments[1];
+                loadNote(noteId);
+            }
+            
+            // Theme toggle
+            themeToggle.addEventListener('click', function() {
+                document.body.classList.toggle('dark-mode');
+                if (document.body.classList.contains('dark-mode')) {
+                    localStorage.setItem('darkMode', 'enabled');
+                    themeToggle.textContent = '☀️';
+                } else {
+                    localStorage.setItem('darkMode', 'disabled');
+                    themeToggle.textContent = '🌙';
+                }
+            });
+            
+            // Save note
+            saveButton.addEventListener('click', function() {
+                if (noteId) {
+                    updateNote();
+                } else {
+                    saveNewNote();
+                }
+            });
+            
+            // Custom URL modal
+            customUrlButton.addEventListener('click', function() {
+                customUrlModal.style.display = 'flex';
+            });
+            
+            cancelCustomUrl.addEventListener('click', function() {
+                customUrlModal.style.display = 'none';
+            });
+            
+            createCustomUrl.addEventListener('click', function() {
+                const customUrl = customUrlInput.value.trim();
+                if (customUrl) {
+                    saveNewNote(customUrl);
+                    customUrlModal.style.display = 'none';
+                }
+            });
+            
+            // Password protection modal
+            lockButton.addEventListener('click', function() {
+                lockModal.style.display = 'flex';
+            });
+            
+            cancelLock.addEventListener('click', function() {
+                lockModal.style.display = 'none';
+            });
+            
+            confirmLock.addEventListener('click', function() {
+                const password = passwordSet.value;
+                const confirmPassword = passwordConfirm.value;
+                
+                if (password !== confirmPassword) {
+                    alert('Passwords do not match!');
+                    return;
+                }
+                
+                if (password.length < 4) {
+                    alert('Password must be at least 4 characters long.');
+                    return;
+                }
+                
+                setNotePassword(password);
+                lockModal.style.display = 'none';
+            });
+            
+            // Unlock button
+            unlockButton.addEventListener('click', function() {
+                const password = passwordInput.value;
+                unlockNote(password);
+            });
+            
+            // Functions
+            function saveNewNote(customPath = null) {
+                const content = editor.value;
+                
+                // In a real app, this would be an API call
+                fetch('/api/notes', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        content: content,
+                        customPath: customPath
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    noteId = data.id;
+                    displayNoteUrl(noteId);
+                    status.textContent = 'Note saved!';
+                    setTimeout(() => {
+                        status.textContent = '';
+                    }, 3000);
+                    
+                    // In a real app, we'd update the browser history
+                    history.pushState({}, '', '/' + noteId);
+                })
+                .catch(error => {
+                    console.error('Error saving note:', error);
+                    status.textContent = 'Error saving note.';
+                });
+            }
+            
+            function updateNote() {
+                const content = editor.value;
+                
+                // In a real app, this would be an API call
+                fetch(`/api/notes/${noteId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        content: content
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    status.textContent = 'Note updated!';
+                    setTimeout(() => {
+                        status.textContent = '';
+                    }, 3000);
+                })
+                .catch(error => {
+                    console.error('Error updating note:', error);
+                    status.textContent = 'Error updating note.';
+                });
+            }
+            
+            function loadNote(id) {
+                // In a real app, this would be an API call
+                fetch(`/api/notes/${id}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.passwordProtected && !data.unlocked) {
+                        showPasswordPrompt();
+                    } else {
+                        editor.value = data.content;
+                        noteId = id;
+                        displayNoteUrl(id);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading note:', error);
+                    status.textContent = 'Error loading note.';
+                });
+            }
+            
+            function setNotePassword(password) {
+                // In a real app, this would be an API call
+                fetch(`/api/notes/${noteId}/password`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        password: password
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    isPasswordProtected = true;
+                    status.textContent = 'Note password protected!';
+                    setTimeout(() => {
+                        status.textContent = '';
+                    }, 3000);
+                })
+                .catch(error => {
+                    console.error('Error setting password:', error);
+                    status.textContent = 'Error setting password.';
+                });
+            }
+            
+            function unlockNote(password) {
+                // In a real app, this would be an API call
+                fetch(`/api/notes/${noteId}/unlock`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        password: password
+                    }),
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Incorrect password');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    hidePasswordPrompt();
+                    editor.value = data.content;
+                })
+                .catch(error => {
+                    console.error('Error unlocking note:', error);
+                    alert('Incorrect password. Please try again.');
+                });
+            }
+            
+            function displayNoteUrl(id) {
+                const baseUrl = window.location.origin;
+                const fullUrl = `${baseUrl}/${id}`;
+                noteUrl.href = fullUrl;
+                noteUrl.textContent = fullUrl;
+                urlDisplay.style.display = 'block';
+            }
+            
+            function showPasswordPrompt() {
+                passwordScreen.style.display = 'block';
+                editorView.style.display = 'none';
+            }
+            
+            function hidePasswordPrompt() {
+                passwordScreen.style.display = 'none';
+                editorView.style.display = 'block';
+            }
+            
+            // Close modals when clicking outside
+            window.addEventListener('click', function(event) {
+                if (event.target === customUrlModal) {
+                    customUrlModal.style.display = 'none';
+                }
+                if (event.target === lockModal) {
+                    lockModal.style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
