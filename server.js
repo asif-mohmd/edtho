@@ -1,6 +1,5 @@
 require("dotenv").config();
 const express = require("express");
-const mysql = require("mysql2");
 const bodyParser = require("body-parser");
 const path = require("path");
 const crypto = require("crypto");
@@ -10,9 +9,15 @@ const helmet = require("helmet");
 const compression = require("compression");
 const cors = require("cors");
 const logger = require("./config/logger");
+const connectDB = require("./config/database");
+const Note = require("./models/Note");
 const app = express();
 const port = process.env.PORT || 3000;
 const cron = require("node-cron");
+// const { cryptoEncrypt, cryptoDecrypt } = require("./utils/cryptoValidator");
+
+// Connect to MongoDB
+connectDB();
 
 // Security middleware
 app.use(
@@ -42,45 +47,6 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.json({ limit: "5mb" }));
 app.use(express.static("public"));
-
-// Database connection
-const db = mysql.createConnection({
-  host: process.env.DB_HOST || "localhost",
-  user: process.env.DB_USER || "root",
-  password: process.env.DB_PASSWORD || "",
-  database: process.env.DB_NAME || "edtho_db",
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-});
-
-// Handle database connection
-db.connect((err) => {
-  if (err) {
-    logger.error("Error connecting to MySQL:", err);
-    return;
-  }
-  logger.info("Connected to MySQL database");
-
-  // Create tables if they don't exist
-  const createNotesTable = `
-    CREATE TABLE IF NOT EXISTS notes (
-      id VARCHAR(255) PRIMARY KEY,
-      content TEXT,
-      password VARCHAR(255),
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    )
-  `;
-
-  db.query(createNotesTable, (err) => {
-    if (err) {
-      logger.error("Error creating notes table:", err);
-    } else {
-      logger.info("Notes table ready");
-    }
-  });
-});
 
 // Generate a random ID for notes
 function generateRandomId(length = 8) {
@@ -126,59 +92,44 @@ app.post("/api/notes", async (req, res) => {
 
   const id = customPath || generateRandomId();
 
-  // Check if custom path already exists
-  if (customPath) {
-    db.query(
-      "SELECT id FROM notes WHERE id = ?",
-      [customPath],
-      (err, results) => {
-        if (err) {
-          console.error("Error checking custom path:", err);
-          return res.status(500).json({ error: "Server error" });
-        }
-
-        if (results.length > 0) {
-          return res.status(400).json({ error: "Custom URL already taken" });
-        }
-
-        insertNote();
+  try {
+    // Check if custom path already exists
+    if (customPath) {
+      const existingNote = await Note.findOne({ id: customPath });
+      if (existingNote) {
+        return res.status(400).json({ error: "Custom URL already taken" });
       }
-    );
-  } else {
-    insertNote();
-  }
+    }
+    console.log(content);
+    // const encryptedContent = await cryptoEncrypt(content);
+    // console.log(encryptedContent, "---------------");
 
-  function insertNote() {
-    db.query(
-      "INSERT INTO notes (id, content) VALUES (?, ?)",
-      [id, content],
-      (err) => {
-        if (err) {
-          console.error("Error saving note:", err);
-          return res.status(500).json({ error: "Failed to save note" });
-        }
+    // Create new note
+    const note = new Note({
+      id,
+      content: content || "",
+    });
 
-        res.status(201).json({ id, success: true });
-      }
-    );
+    await note.save();
+    res.status(201).json({ id, success: true });
+  } catch (error) {
+    logger.error("Error creating note:", error);
+    res.status(500).json({ error: "Failed to create note" });
   }
 });
 
 // Get a note
-app.get("/api/notes/:id", (req, res) => {
+app.get("/api/notes/:id", async (req, res) => {
   const { id } = req.params;
 
   if (!validateId(id)) {
     return res.status(400).json({ error: "Invalid ID format" });
   }
 
-  db.query("SELECT * FROM notes WHERE id = ?", [id], (err, results) => {
-    if (err) {
-      console.error("Error fetching note:", err);
-      return res.status(500).json({ error: "Failed to fetch note" });
-    }
+  try {
+    const note = await Note.findOne({ id });
 
-    if (results.length === 0) {
+    if (!note) {
       // Treat this as a custom URL
       return res.status(200).json({
         id,
@@ -188,8 +139,6 @@ app.get("/api/notes/:id", (req, res) => {
         passwordProtected: false,
       });
     }
-
-    const note = results[0];
 
     // Check if note is password protected
     if (note.password) {
@@ -202,17 +151,22 @@ app.get("/api/notes/:id", (req, res) => {
       });
     }
 
+    // const decryptedContent = await cryptoDecrypt(note.content);
+
     res.json({
       id: note.id,
       content: note.content,
       passwordProtected: false,
       exists: true,
     });
-  });
+  } catch (error) {
+    logger.error("Error fetching note:", error);
+    res.status(500).json({ error: "Failed to fetch note" });
+  }
 });
 
 // Update a note
-app.put("/api/notes/:id", (req, res) => {
+app.put("/api/notes/:id", async (req, res) => {
   const { id } = req.params;
   const { content } = req.body;
 
@@ -224,38 +178,24 @@ app.put("/api/notes/:id", (req, res) => {
     return res.status(400).json({ error: "Invalid content" });
   }
 
-  db.query(
-    "UPDATE notes SET content = ? WHERE id = ?",
-    [content, id],
-    (err, result) => {
-      if (err) {
-        console.error("Error updating note:", err);
-        return res.status(500).json({ error: "Failed to update note" });
-      }
+  try {
+    // const encryptedContent = await cryptoEncrypt(content);
 
-      if (result.affectedRows === 0) {
-        db.query(
-          "Insert INTO notes (id, content) VALUES (?, ?)",
-          [id, content],
-          (err, results) => {
-            if (err) {
-              console.error("Error creating note:", err);
-              return res.status(500).json({ error: "Failed to create note" });
-            }
-            if (results.affectedRows === 0) {
-              return res.status(404).json({ error: "Note not found" });
-            }
-            return res.json({ success: true });
-          }
-        );
-      } else {
-        return res.json({ success: true });
-      }
-    }
-  );
+    const note = await Note.findOneAndUpdate(
+      { id },
+      { content: content },
+      { new: true, upsert: true }
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    logger.error("Error updating note:", error);
+    res.status(500).json({ error: "Failed to update note" });
+  }
 });
+
 // Update note slug (custom URL)
-app.put("/api/notes/:id/slug", (req, res) => {
+app.put("/api/notes/:id/slug", async (req, res) => {
   const { id } = req.params;
   const { newSlug } = req.body;
 
@@ -263,32 +203,29 @@ app.put("/api/notes/:id/slug", (req, res) => {
     return res.status(400).json({ error: "Invalid ID format" });
   }
 
-  // Check if newSlug already exists
-  db.query("SELECT id FROM notes WHERE id = ?", [newSlug], (err, results) => {
-    if (err) {
-      console.error("Error checking slug:", err);
-      return res.status(500).json({ error: "Server error" });
-    }
-    if (results.length > 0) {
+  try {
+    // Check if newSlug already exists
+    const existingNote = await Note.findOne({ id: newSlug });
+    if (existingNote) {
       return res.status(400).json({ error: "Custom URL already taken" });
     }
 
     // Update the note's ID (slug)
-    db.query(
-      "UPDATE notes SET id = ? WHERE id = ?",
-      [newSlug, id],
-      (err, result) => {
-        if (err) {
-          console.error("Error updating slug:", err);
-          return res.status(500).json({ error: "Failed to update slug" });
-        }
-        if (result.affectedRows === 0) {
-          return res.status(404).json({ error: "Note not found" });
-        }
-        res.json({ success: true, newSlug });
-      }
+    const note = await Note.findOneAndUpdate(
+      { id },
+      { id: newSlug },
+      { new: true }
     );
-  });
+
+    if (!note) {
+      return res.status(404).json({ error: "Note not found" });
+    }
+
+    res.json({ success: true, newSlug });
+  } catch (error) {
+    logger.error("Error updating slug:", error);
+    res.status(500).json({ error: "Failed to update slug" });
+  }
 });
 
 // Set note password
@@ -309,25 +246,20 @@ app.post("/api/notes/:id/password", async (req, res) => {
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    db.query(
-      "UPDATE notes SET password = ? WHERE id = ?",
-      [hashedPassword, id],
-      (err, result) => {
-        if (err) {
-          console.error("Error setting password:", err);
-          return res.status(500).json({ error: "Failed to set password" });
-        }
-
-        if (result.affectedRows === 0) {
-          return res.status(404).json({ error: "Note not found" });
-        }
-
-        res.json({ success: true });
-      }
+    const note = await Note.findOneAndUpdate(
+      { id },
+      { password: hashedPassword },
+      { new: true }
     );
-  } catch (err) {
-    console.error("Error hashing password:", err);
-    res.status(500).json({ error: "Server error" });
+
+    if (!note) {
+      return res.status(404).json({ error: "Note not found" });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    logger.error("Error setting password:", error);
+    res.status(500).json({ error: "Failed to set password" });
   }
 });
 
@@ -344,40 +276,33 @@ app.post("/api/notes/:id/unlock", async (req, res) => {
     return res.status(400).json({ error: "Invalid password" });
   }
 
-  db.query("SELECT * FROM notes WHERE id = ?", [id], async (err, results) => {
-    if (err) {
-      console.error("Error fetching note:", err);
-      return res.status(500).json({ error: "Server error" });
-    }
+  try {
+    const note = await Note.findOne({ id });
 
-    if (results.length === 0) {
+    if (!note) {
       return res.status(404).json({ error: "Note not found" });
     }
 
-    const note = results[0];
-
-    try {
-      // Compare password
-      const match = await bcrypt.compare(password, note.password);
-      if (!match) {
-        return res.status(401).json({ error: "Incorrect password" });
-      }
-
-      res.json({
-        id: note.id,
-        content: note.content,
-        passwordProtected: true,
-        unlocked: true,
-      });
-    } catch (err) {
-      console.error("Error comparing passwords:", err);
-      res.status(500).json({ error: "Server error" });
+    // Compare password
+    const match = await bcrypt.compare(password, note.password);
+    if (!match) {
+      return res.status(401).json({ error: "Incorrect password" });
     }
-  });
+
+    res.json({
+      id: note.id,
+      content: note.content,
+      passwordProtected: true,
+      unlocked: true,
+    });
+  } catch (error) {
+    logger.error("Error unlocking note:", error);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
 // Note stats - admin only route
-app.get("/api/stats", (req, res) => {
+app.get("/api/stats", async (req, res) => {
   // This should have proper authentication in production
   const adminKey = req.headers["x-admin-key"];
 
@@ -385,46 +310,41 @@ app.get("/api/stats", (req, res) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  db.query(
-    "SELECT COUNT(*) as total, SUM(password IS NOT NULL) as protected FROM notes",
-    (err, results) => {
-      if (err) {
-        console.error("Error fetching stats:", err);
-        return res.status(500).json({ error: "Server error" });
-      }
+  try {
+    const total = await Note.countDocuments();
+    const protected = await Note.countDocuments({ password: { $ne: null } });
 
-      res.json(results[0]);
-    }
-  );
+    res.json({ total, protected });
+  } catch (error) {
+    logger.error("Error fetching stats:", error);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
 // Cleanup expired notes (could be run as a cron job)
-app.post("/api/maintenance/cleanup", (req, res) => {
+app.post("/api/maintenance/cleanup", async (req, res) => {
   const adminKey = req.headers["x-admin-key"];
 
   if (!adminKey || adminKey !== process.env.ADMIN_KEY) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const daysToKeep = 90; // Delete notes older than 90 days
+  try {
+    const result = await Note.deleteMany({
+      createdAt: { $lt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) },
+    });
 
-  db.query(
-    "DELETE FROM notes WHERE created_at < DATE_SUB(NOW(), INTERVAL ? DAY)",
-    [daysToKeep],
-    (err, result) => {
-      if (err) {
-        console.error("Error cleaning up notes:", err);
-        return res.status(500).json({ error: "Server error" });
-      }
-
-      res.json({
-        success: true,
-        deleted: result.affectedRows,
-      });
-    }
-  );
+    res.json({
+      success: true,
+      deleted: result.deletedCount,
+    });
+  } catch (error) {
+    logger.error("Error cleaning up notes:", error);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
+// Serve static files for all non-API routes
 app.get(/^\/(?!api).*/, (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
@@ -442,10 +362,10 @@ app.get("/", (req, res) => {
 
 // Handle graceful shutdown
 process.on("SIGTERM", () => {
-  console.log("SIGTERM received, shutting down gracefully");
-  db.end();
+  logger.info("SIGTERM received, shutting down gracefully");
+  mongoose.connection.close();
   server.close(() => {
-    console.log("Server closed");
+    logger.info("Server closed");
     process.exit(0);
   });
 });
@@ -455,20 +375,16 @@ const server = app.listen(port, () => {
   logger.info(`Server is running on port ${port}`);
 });
 
-// Run every day at 4 AM
-cron.schedule("0 4 * * *", () => {
-  db.query(
-    "DELETE FROM notes WHERE content IS NULL OR TRIM(content) = ''",
-    (err, result) => {
-      if (err) {
-        console.error("Cronjob error deleting empty notes:", err);
-      } else {
-        console.log(
-          `Cronjob: Deleted ${result.affectedRows} empty notes at 4 AM`
-        );
-      }
-    }
-  );
+// Run cleanup cron job every day at 4 AM
+cron.schedule("0 4 * * *", async () => {
+  try {
+    const result = await Note.deleteMany({
+      $or: [{ content: null }, { content: "" }],
+    });
+    logger.info(`Cronjob: Deleted ${result.deletedCount} empty notes at 4 AM`);
+  } catch (error) {
+    logger.error("Cronjob error deleting empty notes:", error);
+  }
 });
 
 module.exports = app; // For testing
