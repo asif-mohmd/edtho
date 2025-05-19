@@ -1,3 +1,11 @@
+const phrases = [
+  "എന്തായി കിടീലേ?😒",
+  "നീ പൊളിച്ചേ കൂറ്റാ!😘",
+  "ഇനി തരണമോ?😋",
+  "ഇനി വേണോ?😏",
+  "അങ്ങ് കൊടുക്കൂ കുമാരേട്ടാ!😲",
+];
+
 const MAX_LINES = 1500;
 document.addEventListener("DOMContentLoaded", () => {
   const noteContent = document.getElementById("noteContent");
@@ -6,6 +14,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const newNoteBtn = document.getElementById("newNote");
   const saveNoteBtn = document.getElementById("saveNote");
   const statusDiv = document.getElementById("status");
+
+  const headerText = document.getElementById("headerText");
+  const randomPhrase = phrases[Math.floor(Math.random() * phrases.length)];
+
+  // Add fade effect when setting phrase
+  headerText.style.opacity = "0";
+  headerText.style.transform = "translateY(-10px)";
+  headerText.textContent = randomPhrase;
+
+  // Force reflow to restart animation
+  headerText.offsetHeight;
+  headerText.style.animation = "fadeInDown 0.5s ease forwards";
 
   let currentNoteId = null;
 
@@ -114,10 +134,10 @@ document.addEventListener("DOMContentLoaded", () => {
   async function saveNote() {
     try {
       const content = noteContent.value.trim();
-      if (!content) {
-        showStatus("Note cannot be empty", "error");
-        return;
-      }
+      //   if (!content) {
+      //     showStatus("Note cannot be empty", "error");
+      //     return;
+      //   }
 
       const data = {
         content,
