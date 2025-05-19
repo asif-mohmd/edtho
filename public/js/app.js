@@ -371,14 +371,19 @@ document.addEventListener("DOMContentLoaded", () => {
         />
         <div class="error-message"></div>
         <div class="modal-actions">
-          <button class="btn primary" id="submitPassword">Unlock</button>
-          <button class="btn secondary" id="cancelPassword">Back</button>
+          <button class="btn success" id="submitPassword">Unlock</button>
+          <button class="btn primary" id="cancelPassword">New note</button>
         </div>
       </div>
     </div>
   `;
 
     document.body.appendChild(modal);
+
+    modal.style.display = "flex";
+    requestAnimationFrame(() => {
+      modal.classList.add("show");
+    });
 
     // Show modal with animation
     setTimeout(() => modal.classList.add("show"), 10);

@@ -20,7 +20,7 @@ const {
   comparePassword,
   validatePasswordStrength,
   encryptContent,
-  decryptContent
+  decryptContent,
 } = require("./utils/cryptoValidator");
 const Visit = require("./models/Visit");
 // const { cryptoEncrypt, cryptoDecrypt } = require("./utils/cryptoValidator");
@@ -192,7 +192,7 @@ app.get("/api/notes/:id", async (req, res) => {
         exists: true,
         passwordProtected: true,
         unlocked: false,
-        content: null
+        content: null,
       });
     }
 
@@ -203,7 +203,7 @@ app.get("/api/notes/:id", async (req, res) => {
       exists: true,
       passwordProtected: false,
       unlocked: true,
-      content: decryptedContent
+      content: decryptedContent,
     });
   } catch (error) {
     logger.error("Error fetching note:", error);
@@ -231,9 +231,9 @@ app.put("/api/notes/:id", async (req, res) => {
       return res.status(404).json({ error: "Note not found" });
     }
 
-    if (existingNote.password) {
-      return res.status(403).json({ error: "Cannot update password-protected note without unlocking" });
-    }
+    // if (existingNote.password) {
+    //   return res.status(403).json({ error: "Cannot update password-protected note without unlocking" });
+    // }
 
     // Encrypt content before saving
     const encryptedContent = encryptContent(content);
