@@ -16,9 +16,11 @@
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-rate-limit": "^7.1.5",
+    "geoip-lite": "^1.4.7",
     "helmet": "^7.1.0",
     "mongoose": "^8.0.0",
     "node-cron": "^4.0.5",
+    "ua-parser-js": "^1.0.37",
     "winston": "^3.11.0"
   },
   "devDependencies": {

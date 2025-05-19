@@ -14,6 +14,13 @@ const Note = require("./models/Note");
 const app = express();
 const port = process.env.PORT || 3000;
 const cron = require("node-cron");
+const { getClientInfo } = require("./utils/analytics");
+const {
+  hashPassword,
+  comparePassword,
+  validatePasswordStrength,
+} = require("./utils/cryptoValidator");
+const Visit = require("./models/Visit");
 // const { cryptoEncrypt, cryptoDecrypt } = require("./utils/cryptoValidator");
 
 // Connect to MongoDB
@@ -76,6 +83,49 @@ function validateId(id) {
   return /^[a-zA-Z0-9_-]{1,255}$/.test(id);
 }
 
+// Middleware to track visits
+async function trackVisit(req, res, next) {
+  const noteId = req.params.id;
+  if (!noteId) {
+    return next();
+  }
+
+  try {
+    const clientInfo = getClientInfo(req);
+    const action =
+      req.method === "GET"
+        ? "view"
+        : req.method === "PUT"
+        ? "edit"
+        : req.method === "POST"
+        ? "create"
+        : "unlock";
+
+    const visit = new Visit({
+      noteId,
+      ...clientInfo,
+      action,
+    });
+
+    await visit.save();
+
+    // Update note's visit count and last visited timestamp
+    await Note.findOneAndUpdate(
+      { id: noteId },
+      {
+        $inc: { visitCount: 1 },
+        lastVisitedAt: new Date(),
+      }
+    );
+  } catch (error) {
+    logger.error("Error tracking visit:", error);
+  }
+  next();
+}
+
+// Apply visit tracking middleware to note-related routes
+app.use("/api/notes/:id", trackVisit);
+
 // API Routes
 // Create a new note
 app.post("/api/notes", async (req, res) => {
@@ -101,8 +151,6 @@ app.post("/api/notes", async (req, res) => {
       }
     }
     console.log(content);
-    // const encryptedContent = await cryptoEncrypt(content);
-    // console.log(encryptedContent, "---------------");
 
     // Create new note
     const note = new Note({
@@ -151,8 +199,6 @@ app.get("/api/notes/:id", async (req, res) => {
       });
     }
 
-    // const decryptedContent = await cryptoDecrypt(note.content);
-
     res.json({
       id: note.id,
       content: note.content,
@@ -179,8 +225,6 @@ app.put("/api/notes/:id", async (req, res) => {
   }
 
   try {
-    // const encryptedContent = await cryptoEncrypt(content);
-
     const note = await Note.findOneAndUpdate(
       { id },
       { content: content },
@@ -229,6 +273,7 @@ app.put("/api/notes/:id/slug", async (req, res) => {
 });
 
 // Set note password
+// Update the password setting route
 app.post("/api/notes/:id/password", async (req, res) => {
   const { id } = req.params;
   const { password } = req.body;
@@ -237,29 +282,38 @@ app.post("/api/notes/:id/password", async (req, res) => {
     return res.status(400).json({ error: "Invalid ID format" });
   }
 
-  if (!password || typeof password !== "string" || password.length < 4) {
-    return res.status(400).json({ error: "Invalid password" });
+  if (!password || typeof password !== "string" || password.length < 8) {
+    return res
+      .status(400)
+      .json({ error: "Password must be at least 8 characters long" });
   }
 
   try {
-    // Hash the password
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-    const note = await Note.findOneAndUpdate(
-      { id },
-      { password: hashedPassword },
-      { new: true }
-    );
+    const note = await Note.findOne({ id });
 
     if (!note) {
       return res.status(404).json({ error: "Note not found" });
     }
 
-    res.json({ success: true });
+    const hashedPassword = await hashPassword(password);
+
+    const updatedNote = await Note.findOneAndUpdate(
+      { id },
+      { password: hashedPassword },
+      { new: true }
+    );
+
+    if (!updatedNote) {
+      return res.status(500).json({ error: "Failed to update note" });
+    }
+
+    res.json({
+      success: true,
+      message: "Password set successfully",
+    });
   } catch (error) {
     logger.error("Error setting password:", error);
-    res.status(500).json({ error: "Failed to set password" });
+    res.status(500).json({ error: "Server error while setting password" });
   }
 });
 
@@ -283,8 +337,7 @@ app.post("/api/notes/:id/unlock", async (req, res) => {
       return res.status(404).json({ error: "Note not found" });
     }
 
-    // Compare password
-    const match = await bcrypt.compare(password, note.password);
+    const match = await comparePassword(password, note.password);
     if (!match) {
       return res.status(401).json({ error: "Incorrect password" });
     }
@@ -340,6 +393,46 @@ app.post("/api/maintenance/cleanup", async (req, res) => {
     });
   } catch (error) {
     logger.error("Error cleaning up notes:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Add analytics endpoint
+app.get("/api/notes/:id/analytics", async (req, res) => {
+  const { id } = req.params;
+  const adminKey = req.headers["x-admin-key"];
+
+  if (!adminKey || adminKey !== process.env.ADMIN_KEY) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const note = await Note.findOne({ id });
+    if (!note) {
+      return res.status(404).json({ error: "Note not found" });
+    }
+
+    const visits = await Visit.find({ noteId: id })
+      .sort({ createdAt: -1 })
+      .limit(100);
+
+    const analytics = {
+      totalVisits: note.visitCount,
+      lastVisited: note.lastVisitedAt,
+      recentVisits: visits.map((visit) => ({
+        timestamp: visit.createdAt,
+        action: visit.action,
+        country: visit.country,
+        city: visit.city,
+        browser: visit.browser,
+        os: visit.os,
+        device: visit.device,
+      })),
+    };
+
+    res.json(analytics);
+  } catch (error) {
+    logger.error("Error fetching analytics:", error);
     res.status(500).json({ error: "Server error" });
   }
 });

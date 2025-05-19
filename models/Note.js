@@ -15,6 +15,14 @@ const noteSchema = new mongoose.Schema({
   password: {
     type: String,
     default: null
+  },
+  visitCount: {
+    type: Number,
+    default: 0
+  },
+  lastVisitedAt: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true // This will add createdAt and updatedAt fields automatically
@@ -22,6 +30,8 @@ const noteSchema = new mongoose.Schema({
 
 // Create indexes for better performance
 noteSchema.index({ createdAt: -1 });
+noteSchema.index({ lastVisitedAt: -1 });
+noteSchema.index({ visitCount: -1 });
 
 // Create and export the Note model
 const Note = mongoose.model('Note', noteSchema);

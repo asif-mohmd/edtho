@@ -211,6 +211,7 @@ input:focus {
     transform: translateY(0);
   }
 }
+
 .modal {
   display: none;
   position: fixed;
@@ -220,26 +221,173 @@ input:focus {
   height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
   z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.modal.show {
+  opacity: 1;
 }
 
 .modal-content {
   background-color: white;
   margin: 15% auto;
-  padding: 20px;
-  border-radius: 8px;
+  padding: 30px;
+  border-radius: 12px;
   width: 90%;
   max-width: 500px;
   position: relative;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  transform: translateY(-20px);
+  transition: transform 0.3s ease-in-out;
+}
+
+.modal.show .modal-content {
+  transform: translateY(0);
+}
+
+.close {
+  position: absolute;
+  right: 20px;
+  top: 15px;
+  font-size: 24px;
+  font-weight: bold;
+  color: #666;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.close:hover {
+  color: #333;
 }
 
 .settings-section {
   display: none;
   margin-top: 20px;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
 }
 
 .settings-section.active {
   display: flex;
   flex-direction: column;
   gap: 15px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.settings-section input {
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.settings-section input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+  outline: none;
+}
+
+.settings-section .btn {
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.settings-section .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.settings-section .btn:active {
+  transform: translateY(0);
+}
+
+/* Password strength indicator */
+.password-strength {
+  margin-top: 8px;
+  height: 4px;
+  background: #e0e0e0;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.password-strength-bar {
+  height: 100%;
+  width: 0;
+  transition: width 0.3s ease-in-out, background-color 0.3s ease-in-out;
+}
+
+.password-strength-bar.weak {
+  width: 33.33%;
+  background-color: #f44336;
+}
+
+.password-strength-bar.medium {
+  width: 66.66%;
+  background-color: #ff9800;
+}
+
+.password-strength-bar.strong {
+  width: 100%;
+  background-color: #4caf50;
+}
+
+.password-strength-text {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #666;
+}
+
+/* Error message styling */
+/* Add or update error message styling */
+.error-message {
+  color: var(--error-color);
+  font-size: 14px;
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 4px;
+  background-color: rgba(244, 67, 54, 0.1);
+  display: none;
+}
+
+.error-message.show {
+  display: block;
+  animation: shake 0.5s ease-in-out;
+}
+
+/* Add password strength indicator styles */
+.password-strength {
+  margin: 8px 0;
+}
+
+.password-strength-bar {
+  height: 4px;
+  background: #e0e0e0;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.password-strength-text {
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
 }

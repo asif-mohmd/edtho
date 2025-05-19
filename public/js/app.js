@@ -30,6 +30,16 @@ document.addEventListener("DOMContentLoaded", () => {
     passwordSettings.classList.remove("active");
     section.classList.add("active");
     modal.style.display = "block";
+    setTimeout(() => {
+      modal.classList.add("show");
+    }, 10);
+  }
+
+  function hideModal() {
+    modal.classList.remove("show");
+    setTimeout(() => {
+      modal.style.display = "none";
+    }, 300);
   }
 
   // Modal event listeners
@@ -41,14 +51,12 @@ document.addEventListener("DOMContentLoaded", () => {
     showModal("Set Password", passwordSettings);
   });
 
-  closeBtn.addEventListener("click", () => {
-    modal.style.display = "none";
-  });
+  closeBtn.addEventListener("click", hideModal);
 
   // Close modal when clicking outside
   window.addEventListener("click", (event) => {
     if (event.target === modal) {
-      modal.style.display = "none";
+      hideModal();
     }
   });
 
@@ -79,30 +87,90 @@ document.addEventListener("DOMContentLoaded", () => {
       window.history.pushState({}, "", `/${newSlug}`);
       currentNoteId = newSlug;
       showStatus("URL updated successfully", "success");
-      modal.style.display = "none";
+      hideModal();
       customPathInput.value = "";
     } catch (error) {
       showStatus(error.message, "error");
     }
   });
 
-  // Handle password update
-  // Update the password handler function
+  // Password validation and UI
+  function validatePassword(password) {
+    const minLength = 8;
+    const hasNumber = /\d/.test(password);
+    const hasUpper = /[A-Z]/.test(password);
+    const hasLower = /[a-z]/.test(password);
+    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    const isLongEnough = password.length >= minLength;
+
+    const strength = {
+      score: 0,
+      message: "",
+    };
+
+    if (isLongEnough) strength.score++;
+    if (hasNumber) strength.score++;
+    if (hasUpper) strength.score++;
+    if (hasLower) strength.score++;
+    if (hasSpecial) strength.score++;
+
+    switch (strength.score) {
+      case 0:
+      case 1:
+        strength.message = "Very Weak";
+        break;
+      case 2:
+        strength.message = "Weak";
+        break;
+      case 3:
+        strength.message = "Medium";
+        break;
+      case 4:
+        strength.message = "Strong";
+        break;
+      case 5:
+        strength.message = "Very Strong";
+        break;
+    }
+
+    return {
+      valid: strength.score >= 3,
+      strength: strength.message.toLowerCase(),
+      message: `Password is ${strength.message}`,
+    };
+  }
+
+  function updatePasswordStrength(password) {
+    const strengthBar = document.querySelector(".password-strength-bar");
+    const strengthText = document.querySelector(".password-strength-text");
+    const validation = validatePassword(password);
+
+    strengthBar.className = "password-strength-bar";
+    if (password) {
+      strengthBar.classList.add(validation.strength);
+    }
+
+    strengthText.textContent = validation.message;
+    return validation.valid;
+  }
+
+  // Update password handler
+  // Update the password-related code in the event listener section:
   updatePasswordBtn.addEventListener("click", async () => {
     const passwordInput = document.getElementById("notePassword");
     const password = passwordInput.value.trim();
-
-    if (!password) {
-      showStatus("Please enter a password", "error");
-      return;
-    }
-
-    if (password.length < 4) {
-      showStatus("Password must be at least 4 characters long", "error");
-      return;
-    }
+    const errorMessage = document.querySelector(".error-message");
 
     try {
+      // Basic client-side validation
+      if (!password) {
+        throw new Error("Please enter a password");
+      }
+
+      if (password.length < 8) {
+        throw new Error("Password must be at least 8 characters long");
+      }
+
       const response = await fetch(`/api/notes/${currentNoteId}/password`, {
         method: "POST",
         headers: {
@@ -118,12 +186,32 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       showStatus("Password set successfully", "success");
-      modal.style.display = "none";
-      passwordInput.value = ""; // Clear the password input
+      hideModal();
+      passwordInput.value = "";
+      errorMessage.classList.remove("show");
     } catch (error) {
+      errorMessage.textContent = error.message;
+      errorMessage.classList.add("show");
       showStatus(error.message, "error");
     }
   });
+
+  // Add password strength indicator to the modal
+  const strengthIndicator = document.createElement("div");
+  strengthIndicator.className = "password-strength";
+  strengthIndicator.innerHTML = `
+    <div class="password-strength-bar"></div>
+    <div class="password-strength-text"></div>
+    <div class="error-message"></div>
+  `;
+  passwordSettings.insertBefore(strengthIndicator, passwordSettings.firstChild);
+
+  // Add password input event listener
+  const passwordInput = document.getElementById("notePassword");
+  passwordInput.addEventListener("input", (e) => {
+    updatePasswordStrength(e.target.value);
+  });
+
   function enforceLineLimit() {
     let lines = noteContent.value.split("\n");
     if (lines.length > MAX_LINES) {
