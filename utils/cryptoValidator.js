@@ -1,5 +1,5 @@
-const bcrypt = require('bcrypt');
-const crypto = require('crypto');
+const bcrypt = require("bcrypt");
+const crypto = require("crypto");
 const { CRYPTO_IV, CRYPTO_ACCESS_TOKEN_KEY } = require("../config/envVariable");
 
 const algorithm = "aes-256-cbc";
@@ -35,7 +35,7 @@ const cryptoDecrypt = async (data) => {
 
 // Constants for password hashing
 const SALT_ROUNDS = 12; // Increased from 10 for better security
-const MIN_PASSWORD_LENGTH = 8;
+const MIN_PASSWORD_LENGTH = 4;
 
 /**
  * Hash a password using bcrypt
@@ -43,15 +43,21 @@ const MIN_PASSWORD_LENGTH = 8;
  * @returns {Promise<string>} The hashed password
  */
 async function hashPassword(password) {
-  if (!password || typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
-    throw new Error(`Password must be at least ${MIN_PASSWORD_LENGTH} characters long`);
+  if (
+    !password ||
+    typeof password !== "string" ||
+    password.length < MIN_PASSWORD_LENGTH
+  ) {
+    throw new Error(
+      `Password must be at least ${MIN_PASSWORD_LENGTH} characters long`
+    );
   }
 
   try {
     const salt = await bcrypt.genSalt(SALT_ROUNDS);
     return await bcrypt.hash(password, salt);
   } catch (error) {
-    throw new Error('Error hashing password');
+    throw new Error("Error hashing password");
   }
 }
 
@@ -69,7 +75,7 @@ async function comparePassword(password, hash) {
   try {
     return await bcrypt.compare(password, hash);
   } catch (error) {
-    throw new Error('Error comparing passwords');
+    throw new Error("Error comparing passwords");
   }
 }
 
@@ -79,17 +85,17 @@ async function comparePassword(password, hash) {
  * @returns {Object} Validation result
  */
 function validatePasswordStrength(password) {
-  if (!password || typeof password !== 'string') {
+  if (!password || typeof password !== "string") {
     return {
       valid: false,
-      message: 'Password is required'
+      message: "Password is required",
     };
   }
 
   if (password.length < MIN_PASSWORD_LENGTH) {
     return {
       valid: false,
-      message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters long`
+      message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters long`,
     };
   }
 
@@ -97,7 +103,7 @@ function validatePasswordStrength(password) {
   if (!/\d/.test(password)) {
     return {
       valid: false,
-      message: 'Password must contain at least one number'
+      message: "Password must contain at least one number",
     };
   }
 
@@ -105,7 +111,7 @@ function validatePasswordStrength(password) {
   if (!/[A-Z]/.test(password)) {
     return {
       valid: false,
-      message: 'Password must contain at least one uppercase letter'
+      message: "Password must contain at least one uppercase letter",
     };
   }
 
@@ -113,7 +119,7 @@ function validatePasswordStrength(password) {
   if (!/[a-z]/.test(password)) {
     return {
       valid: false,
-      message: 'Password must contain at least one lowercase letter'
+      message: "Password must contain at least one lowercase letter",
     };
   }
 
@@ -121,14 +127,65 @@ function validatePasswordStrength(password) {
   if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
     return {
       valid: false,
-      message: 'Password must contain at least one special character'
+      message: "Password must contain at least one special character",
     };
   }
 
   return {
     valid: true,
-    message: 'Password is strong'
+    message: "Password is strong",
   };
+}
+
+/**
+ * Encrypt content with minimal size overhead
+ * @param {string} content - The content to encrypt
+ * @returns {string} Encrypted content
+ */
+function encryptContent(content) {
+  if (!content) return '';
+  
+  try {
+    // Use a simple XOR cipher with a fixed key for minimal size overhead
+    const key = Buffer.from(CRYPTO_ACCESS_TOKEN_KEY, 'hex').slice(0, 16);
+    const contentBuffer = Buffer.from(content, 'utf8');
+    const encrypted = Buffer.alloc(contentBuffer.length);
+    
+    for (let i = 0; i < contentBuffer.length; i++) {
+      encrypted[i] = contentBuffer[i] ^ key[i % key.length];
+    }
+    
+    // Convert to base64 for safe storage
+    return encrypted.toString('base64');
+  } catch (error) {
+    console.error('Error encrypting content:', error);
+    throw new Error('Failed to encrypt content');
+  }
+}
+
+/**
+ * Decrypt content
+ * @param {string} encryptedContent - The encrypted content
+ * @returns {string} Decrypted content
+ */
+function decryptContent(encryptedContent) {
+  if (!encryptedContent) return '';
+  
+  try {
+    // Convert from base64
+    const encrypted = Buffer.from(encryptedContent, 'base64');
+    const key = Buffer.from(CRYPTO_ACCESS_TOKEN_KEY, 'hex').slice(0, 16);
+    const decrypted = Buffer.alloc(encrypted.length);
+    
+    for (let i = 0; i < encrypted.length; i++) {
+      decrypted[i] = encrypted[i] ^ key[i % key.length];
+    }
+    
+    return decrypted.toString('utf8');
+  } catch (error) {
+    console.error('Error decrypting content:', error);
+    throw new Error('Failed to decrypt content');
+  }
 }
 
 module.exports = {
@@ -136,5 +193,7 @@ module.exports = {
   cryptoDecrypt,
   hashPassword,
   comparePassword,
-  validatePasswordStrength
+  validatePasswordStrength,
+  encryptContent,
+  decryptContent
 };

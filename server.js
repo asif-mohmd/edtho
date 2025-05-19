@@ -19,6 +19,8 @@ const {
   hashPassword,
   comparePassword,
   validatePasswordStrength,
+  encryptContent,
+  decryptContent
 } = require("./utils/cryptoValidator");
 const Visit = require("./models/Visit");
 // const { cryptoEncrypt, cryptoDecrypt } = require("./utils/cryptoValidator");
@@ -150,12 +152,14 @@ app.post("/api/notes", async (req, res) => {
         return res.status(400).json({ error: "Custom URL already taken" });
       }
     }
-    console.log(content);
+
+    // Encrypt content before saving
+    const encryptedContent = encryptContent(content || "");
 
     // Create new note
     const note = new Note({
       id,
-      content: content || "",
+      content: encryptedContent,
     });
 
     await note.save();
@@ -178,32 +182,28 @@ app.get("/api/notes/:id", async (req, res) => {
     const note = await Note.findOne({ id });
 
     if (!note) {
-      // Treat this as a custom URL
-      return res.status(200).json({
-        id,
-        isCustomUrl: true,
-        exists: false,
-        content: null,
-        passwordProtected: false,
-      });
+      return res.status(404).json({ error: "Note not found" });
     }
 
     // Check if note is password protected
     if (note.password) {
       return res.json({
         id: note.id,
+        exists: true,
         passwordProtected: true,
         unlocked: false,
-        content: null,
-        exists: true,
+        content: null
       });
     }
 
+    // If no password, decrypt and return the content
+    const decryptedContent = decryptContent(note.content);
     res.json({
       id: note.id,
-      content: note.content,
-      passwordProtected: false,
       exists: true,
+      passwordProtected: false,
+      unlocked: true,
+      content: decryptedContent
     });
   } catch (error) {
     logger.error("Error fetching note:", error);
@@ -225,10 +225,23 @@ app.put("/api/notes/:id", async (req, res) => {
   }
 
   try {
+    // Check if note exists and is password protected
+    const existingNote = await Note.findOne({ id });
+    if (!existingNote) {
+      return res.status(404).json({ error: "Note not found" });
+    }
+
+    if (existingNote.password) {
+      return res.status(403).json({ error: "Cannot update password-protected note without unlocking" });
+    }
+
+    // Encrypt content before saving
+    const encryptedContent = encryptContent(content);
+
     const note = await Note.findOneAndUpdate(
       { id },
-      { content: content },
-      { new: true, upsert: true }
+      { content: encryptedContent },
+      { new: true }
     );
 
     res.json({ success: true });
@@ -282,10 +295,10 @@ app.post("/api/notes/:id/password", async (req, res) => {
     return res.status(400).json({ error: "Invalid ID format" });
   }
 
-  if (!password || typeof password !== "string" || password.length < 8) {
+  if (!password || typeof password !== "string" || password.length < 4) {
     return res
       .status(400)
-      .json({ error: "Password must be at least 8 characters long" });
+      .json({ error: "Password must be at least 4 characters long" });
   }
 
   try {
@@ -327,7 +340,7 @@ app.post("/api/notes/:id/unlock", async (req, res) => {
   }
 
   if (!password || typeof password !== "string") {
-    return res.status(400).json({ error: "Invalid password" });
+    return res.status(400).json({ error: "Please enter a password" });
   }
 
   try {
@@ -337,20 +350,30 @@ app.post("/api/notes/:id/unlock", async (req, res) => {
       return res.status(404).json({ error: "Note not found" });
     }
 
+    if (!note.password) {
+      return res.status(400).json({ error: "Note is not password protected" });
+    }
+
     const match = await comparePassword(password, note.password);
     if (!match) {
+      // Add a small delay to prevent brute force attempts
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       return res.status(401).json({ error: "Incorrect password" });
     }
 
+    // Decrypt content before sending
+    const decryptedContent = decryptContent(note.content);
+
+    // Note unlocked successfully
     res.json({
       id: note.id,
-      content: note.content,
+      content: decryptedContent,
       passwordProtected: true,
       unlocked: true,
     });
   } catch (error) {
     logger.error("Error unlocking note:", error);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: "Server error while checking password" });
   }
 });
 

@@ -379,15 +379,55 @@ input:focus {
   margin-top: 4px;
 }
 
+.password-prompt-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 20px 0;
+}
+
+.password-input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+
+.password-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+  outline: none;
+}
+
+.password-input.error {
+  border-color: var(--error-color);
+  background-color: rgba(244, 67, 54, 0.05);
+}
+
 @keyframes shake {
   0%,
   100% {
     transform: translateX(0);
   }
-  25% {
-    transform: translateX(-5px);
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-2px);
   }
-  75% {
-    transform: translateX(5px);
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(2px);
   }
+}
+
+/* Button loading state */
+.btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }

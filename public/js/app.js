@@ -96,7 +96,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Password validation and UI
   function validatePassword(password) {
-    const minLength = 8;
+    const minLength = 4;
     const hasNumber = /\d/.test(password);
     const hasUpper = /[A-Z]/.test(password);
     const hasLower = /[a-z]/.test(password);
@@ -167,8 +167,8 @@ document.addEventListener("DOMContentLoaded", () => {
         throw new Error("Please enter a password");
       }
 
-      if (password.length < 8) {
-        throw new Error("Password must be at least 8 characters long");
+      if (password.length < 4) {
+        throw new Error("Password must be at least 4 characters long");
       }
 
       const response = await fetch(`/api/notes/${currentNoteId}/password`, {
@@ -317,27 +317,95 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // Update the loadNote function
   async function loadNote(id) {
     try {
       const response = await fetch(`/api/notes/${id}`);
       const data = await response.json();
 
+      console.log("Load note response:", data);
       if (!response.ok) {
         throw new Error(data.error || "Failed to load note");
       }
 
+      if (!data.exists) {
+        throw new Error("Note not found");
+      }
+
       currentNoteId = id;
 
-      if (data.passwordProtected) {
-        const password = prompt(
-          "This note is password protected. Please enter the password:"
-        );
-        if (!password) {
-          window.location.href = "/";
-          return;
-        }
+      // If note is password protected and not unlocked
+      if (data.passwordProtected && !data.unlocked) {
+        console.log("Showing password prompt modal");
+        showPasswordPromptModal(id);
+        return;
+      }
 
-        const unlockResponse = await fetch(`/api/notes/${id}/unlock`, {
+      // Note is either not password protected or already unlocked
+      noteContent.value = data.content || "";
+      showStatus("Note loaded successfully", "success");
+      updateLineCount();
+    } catch (error) {
+      showStatus(error.message, "error");
+      if (error.message === "Note not found") {
+        window.location.href = "/";
+      }
+    }
+  }
+
+  // Update password prompt modal
+  function showPasswordPromptModal(noteId) {
+    const modal = document.createElement("div");
+    modal.id = "passwordPromptModal";
+    modal.className = "modal";
+
+    modal.innerHTML = `
+    <div class="modal-content">
+      <h3>This note is password protected</h3>
+      <div class="password-prompt-container">
+        <input 
+          type="password" 
+          id="promptPasswordInput" 
+          placeholder="Enter password"
+          class="password-input"
+        />
+        <div class="error-message"></div>
+        <div class="modal-actions">
+          <button class="btn primary" id="submitPassword">Unlock</button>
+          <button class="btn secondary" id="cancelPassword">Back</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+    document.body.appendChild(modal);
+
+    // Show modal with animation
+    setTimeout(() => modal.classList.add("show"), 10);
+
+    const submitBtn = document.getElementById("submitPassword");
+    const cancelBtn = document.getElementById("cancelPassword");
+    const passwordInput = document.getElementById("promptPasswordInput");
+    const errorMessage = modal.querySelector(".error-message");
+
+    // Auto-focus password input
+    passwordInput.focus();
+
+    submitBtn.addEventListener("click", async () => {
+      const password = passwordInput.value.trim();
+
+      if (!password) {
+        errorMessage.textContent = "Please enter a password";
+        errorMessage.classList.add("show");
+        passwordInput.classList.add("error");
+        return;
+      }
+
+      try {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Checking...";
+
+        const response = await fetch(`/api/notes/${noteId}/unlock`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -345,25 +413,52 @@ document.addEventListener("DOMContentLoaded", () => {
           body: JSON.stringify({ password }),
         });
 
-        const unlockData = await unlockResponse.json();
+        const data = await response.json();
 
-        if (!unlockResponse.ok) {
-          throw new Error(unlockData.error || "Invalid password");
+        if (!response.ok) {
+          throw new Error(data.error || "Invalid password");
         }
 
-        noteContent.value = unlockData.content;
-        showStatus("Note unlocked successfully", "success");
-      } else {
+        // Successfully unlocked
         noteContent.value = data.content;
-        showStatus("Note loaded successfully", "success");
+        showStatus("Note unlocked successfully", "success");
+        closePasswordPromptModal();
+        updateLineCount();
+      } catch (error) {
+        errorMessage.textContent = error.message;
+        errorMessage.classList.add("show");
+        passwordInput.classList.add("error");
+        passwordInput.value = "";
+        passwordInput.focus();
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Unlock";
       }
+    });
 
-      updateLineCount();
-    } catch (error) {
-      showStatus(error.message, "error");
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 2000);
+    cancelBtn.addEventListener("click", () => {
+      closePasswordPromptModal();
+      window.location.href = "/";
+    });
+
+    // Handle Enter key
+    passwordInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        submitBtn.click();
+      }
+    });
+
+    // Clear error state on input
+    passwordInput.addEventListener("input", () => {
+      errorMessage.classList.remove("show");
+      passwordInput.classList.remove("error");
+    });
+  }
+
+  function closePasswordPromptModal() {
+    const modal = document.getElementById("passwordPromptModal");
+    if (modal) {
+      modal.remove();
     }
   }
 
