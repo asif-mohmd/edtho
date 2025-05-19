@@ -9,26 +9,121 @@ const phrases = [
 const MAX_LINES = 1500;
 document.addEventListener("DOMContentLoaded", () => {
   const noteContent = document.getElementById("noteContent");
-  const customPath = document.getElementById("customPath");
-  const notePassword = document.getElementById("notePassword");
+  const modal = document.getElementById("settingsModal");
+  const customUrlBtn = document.getElementById("customUrlBtn");
+  const passwordBtn = document.getElementById("passwordBtn");
+  const closeBtn = document.querySelector(".close");
+  const modalTitle = document.getElementById("modalTitle");
+  const urlSettings = document.getElementById("urlSettings");
+  const passwordSettings = document.getElementById("passwordSettings");
+  const updateSlugBtn = document.getElementById("updateSlugBtn");
+  const updatePasswordBtn = document.getElementById("updatePasswordBtn");
   const newNoteBtn = document.getElementById("newNote");
   const saveNoteBtn = document.getElementById("saveNote");
-  const statusDiv = document.getElementById("status");
-
-  const headerText = document.getElementById("headerText");
-  const randomPhrase = phrases[Math.floor(Math.random() * phrases.length)];
-
-  // Add fade effect when setting phrase
-  headerText.style.opacity = "0";
-  headerText.style.transform = "translateY(-10px)";
-  headerText.textContent = randomPhrase;
-
-  // Force reflow to restart animation
-  headerText.offsetHeight;
-  headerText.style.animation = "fadeInDown 0.5s ease forwards";
 
   let currentNoteId = null;
 
+  // Modal functions
+  function showModal(title, section) {
+    modalTitle.textContent = title;
+    urlSettings.classList.remove("active");
+    passwordSettings.classList.remove("active");
+    section.classList.add("active");
+    modal.style.display = "block";
+  }
+
+  // Modal event listeners
+  customUrlBtn.addEventListener("click", () => {
+    showModal("Set Custom URL", urlSettings);
+  });
+
+  passwordBtn.addEventListener("click", () => {
+    showModal("Set Password", passwordSettings);
+  });
+
+  closeBtn.addEventListener("click", () => {
+    modal.style.display = "none";
+  });
+
+  // Close modal when clicking outside
+  window.addEventListener("click", (event) => {
+    if (event.target === modal) {
+      modal.style.display = "none";
+    }
+  });
+
+  // Handle custom URL update
+  updateSlugBtn.addEventListener("click", async () => {
+    const newSlug = customPathInput.value.trim();
+
+    if (!newSlug) {
+      showStatus("Please enter a custom URL", "error");
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/notes/${currentNoteId}/slug`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ newSlug }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to update URL");
+      }
+
+      window.history.pushState({}, "", `/${newSlug}`);
+      currentNoteId = newSlug;
+      showStatus("URL updated successfully", "success");
+      modal.style.display = "none";
+      customPathInput.value = "";
+    } catch (error) {
+      showStatus(error.message, "error");
+    }
+  });
+
+  // Handle password update
+  // Update the password handler function
+  updatePasswordBtn.addEventListener("click", async () => {
+    const passwordInput = document.getElementById("notePassword");
+    const password = passwordInput.value.trim();
+
+    if (!password) {
+      showStatus("Please enter a password", "error");
+      return;
+    }
+
+    if (password.length < 4) {
+      showStatus("Password must be at least 4 characters long", "error");
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/notes/${currentNoteId}/password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to set password");
+      }
+
+      showStatus("Password set successfully", "success");
+      modal.style.display = "none";
+      passwordInput.value = ""; // Clear the password input
+    } catch (error) {
+      showStatus(error.message, "error");
+    }
+  });
   function enforceLineLimit() {
     let lines = noteContent.value.split("\n");
     if (lines.length > MAX_LINES) {
@@ -46,35 +141,6 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(enforceLineLimit, 0);
   });
 
-  const updateSlugBtn = document.getElementById("updateSlugBtn");
-
-  updateSlugBtn.addEventListener("click", async () => {
-    const newSlug = customPath.value.trim();
-    if (!newSlug) {
-      showStatus("Please enter a custom URL.", "error");
-      return;
-    }
-    if (!currentNoteId) {
-      showStatus("No note loaded to update.", "error");
-      return;
-    }
-    try {
-      const response = await fetch(`/api/notes/${currentNoteId}/slug`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newSlug }),
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to update URL");
-      }
-      currentNoteId = newSlug;
-      window.history.pushState({}, "", `/${newSlug}`);
-      showStatus("Custom URL updated!", "success");
-    } catch (error) {
-      showStatus(error.message, "error");
-    }
-  });
   // Check if we're viewing an existing note
   const pathParts = window.location.pathname.split("/");
   if (pathParts.length > 1 && pathParts[1]) {
@@ -130,23 +196,10 @@ document.addEventListener("DOMContentLoaded", () => {
       showStatus("Failed to create note", "error");
     }
   }
-
   async function saveNote() {
     try {
       const content = noteContent.value.trim();
-      //   if (!content) {
-      //     showStatus("Note cannot be empty", "error");
-      //     return;
-      //   }
-
-      const data = {
-        content,
-        customPath: customPath.value.trim(),
-      };
-
-      if (notePassword.value) {
-        data.password = notePassword.value;
-      }
+      const data = { content };
 
       const url = currentNoteId ? `/api/notes/${currentNoteId}` : "/api/notes";
       const method = currentNoteId ? "PUT" : "POST";
@@ -185,6 +238,8 @@ document.addEventListener("DOMContentLoaded", () => {
         throw new Error(data.error || "Failed to load note");
       }
 
+      currentNoteId = id;
+
       if (data.passwordProtected) {
         const password = prompt(
           "This note is password protected. Please enter the password:"
@@ -209,11 +264,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         noteContent.value = unlockData.content;
+        showStatus("Note unlocked successfully", "success");
       } else {
         noteContent.value = data.content;
+        showStatus("Note loaded successfully", "success");
       }
+
       updateLineCount();
-      showStatus("Note loaded successfully", "success");
     } catch (error) {
       showStatus(error.message, "error");
       setTimeout(() => {

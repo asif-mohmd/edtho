@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Edtho</title>
+    <link rel="icon" type="image/x-icon" href="/assets/icons8-share-96.png" />
     <link
       href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
       rel="stylesheet"
@@ -17,10 +18,14 @@
 
         <div class="controls">
           <button id="newNote" class="btn primary">New Note</button>
+          <button id="customUrlBtn" class="btn" title="Set Custom URL">
+            🔗
+          </button>
+          <button id="passwordBtn" class="btn" title="Set Password">🔒</button>
           <button id="saveNote" class="btn success">Save</button>
         </div>
       </header>
-      <h2 id="headerText" class="sub-header"></h2>
+      <!-- <h2 id="headerText" class="sub-header"></h2> -->
       <main>
         <div id="status" class="status"></div>
         <div class="editor-container">
@@ -30,24 +35,35 @@
             placeholder="Start typing your note here..."
           ></textarea>
         </div>
+      </main>
 
-        <div class="note-options">
-          <div class="option-group">
-            <label for="customPath">Custom URL (optional):</label>
-            <input type="text" id="customPath" placeholder="Enter custom URL" />
-            <button id="updateSlugBtn" class="btn">Update URL</button>
+      <div id="settingsModal" class="modal">
+        <div class="modal-content">
+          <span class="close">&times;</span>
+          <h3 id="modalTitle"></h3>
+
+          <div id="urlSettings" class="settings-section">
+            <input
+              type="text"
+              id="customPathInput"
+              placeholder="Enter custom URL"
+            />
+            <button id="updateSlugBtn" class="btn primary">Update URL</button>
           </div>
 
-          <div class="option-group">
-            <label for="notePassword">Password Protection:</label>
+          <div id="passwordSettings" class="settings-section">
             <input
               type="password"
               id="notePassword"
-              placeholder="Enter password to protect note"
+              placeholder="Enter password (minimum 4 characters)"
+              minlength="4"
             />
+            <button id="updatePasswordBtn" class="btn primary">
+              Set Password
+            </button>
           </div>
         </div>
-      </main>
+      </div>
     </div>
 
     <script src="/js/app.js"></script>
