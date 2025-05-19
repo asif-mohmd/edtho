@@ -8,7 +8,6 @@ const phrases = [
 
 const MAX_LINES = 1500;
 document.addEventListener("DOMContentLoaded", () => {
-  const noteContent = document.getElementById("noteContent");
   const modal = document.getElementById("settingsModal");
   const customUrlBtn = document.getElementById("customUrlBtn");
   const passwordBtn = document.getElementById("passwordBtn");
@@ -486,20 +485,37 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }, 1500);
   });
+
+  const noteContent = document.getElementById("noteContent");
+  const lineCount = document.getElementById("lineCount");
+
+  function updateLineCount() {
+    if (!noteContent || !lineCount) return;
+    const lines = noteContent.value.split("\n").length;
+    lineCount.textContent = `${lines}/${MAX_LINES}`;
+  }
+
+  // Update line count on input and paste
+  noteContent.addEventListener("input", updateLineCount);
+  noteContent.addEventListener("paste", () => {
+    setTimeout(updateLineCount, 0);
+  });
+
+  // Call once on page load if there's initial content
+  updateLineCount();
 });
 
-const lineCount = document.getElementById("lineCount");
+// const lineCount = document.getElementById("lineCount");
 
-function updateLineCount() {
-  const lines = noteContent.value.split("\n").length;
-  lineCount.textContent = `${lines}/${MAX_LINES}`;
-}
+// function updateLineCount() {
+//   const lines = noteContent.value.split("\n").length;
+//   lineCount.textContent = `${lines}/${MAX_LINES}`;
+// }
 
-// Update line count on input and paste
-noteContent.addEventListener("input", updateLineCount);
-noteContent.addEventListener("paste", function () {
-  setTimeout(updateLineCount, 0);
-});
+// // Update line count on input and paste
+// noteContent.addEventListener("input", updateLineCount);
+// noteContent.addEventListener("paste", function () {
+//   setTimeout(updateLineCount, 0);
+// });
 
 // Call once on page load
-updateLineCount();

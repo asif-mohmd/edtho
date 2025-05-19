@@ -387,3 +387,7 @@
 {"level":"info","message":"MongoDB Connected: ac-tsquoxi-shard-00-01.shlpbd1.mongodb.net","service":"notepad-app","timestamp":"2025-05-19 20:20:17"}
 {"level":"info","message":"Server is running on port 3006","service":"notepad-app","timestamp":"2025-05-19 20:21:21"}
 {"level":"info","message":"MongoDB Connected: ac-tsquoxi-shard-00-02.shlpbd1.mongodb.net","service":"notepad-app","timestamp":"2025-05-19 20:21:22"}
+{"level":"info","message":"Server is running on port 3006","service":"notepad-app","timestamp":"2025-05-19 20:21:43"}
+{"level":"info","message":"MongoDB Connected: ac-tsquoxi-shard-00-02.shlpbd1.mongodb.net","service":"notepad-app","timestamp":"2025-05-19 20:21:45"}
+{"level":"info","message":"Server is running on port 3006","service":"notepad-app","timestamp":"2025-05-19 20:26:17"}
+{"level":"info","message":"MongoDB Connected: ac-tsquoxi-shard-00-00.shlpbd1.mongodb.net","service":"notepad-app","timestamp":"2025-05-19 20:26:17"}
