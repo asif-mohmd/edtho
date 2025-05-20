@@ -19,7 +19,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const updatePasswordBtn = document.getElementById("updatePasswordBtn");
   const newNoteBtn = document.getElementById("newNote");
   const saveNoteBtn = document.getElementById("saveNote");
-
+  const noteContent = document.getElementById("noteContent");
+  const lineCount = document.getElementById("lineCount");
   let currentNoteId = null;
 
   // Modal functions
@@ -264,6 +265,32 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  async function createNoteWithId(id) {
+  try {
+    const response = await fetch("/api/notes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ content: "", customPath: id }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || "Failed to create new note with custom ID");
+    }
+
+    currentNoteId = id;
+    noteContent.value = "";
+    showStatus("New note created with custom ID", "success");
+    updateLineCount();
+  } catch (error) {
+    showStatus(error.message, "error");
+  }
+}
+
+
   async function autoCreateNote() {
     try {
       const response = await fetch("/api/notes", {
@@ -324,12 +351,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
       console.log("Load note response:", data);
       if (!response.ok) {
-        throw new Error(data.error || "Failed to load note");
+        // throw new Error(data.error || "Failed to load note");
+          await createNoteWithId(id);
+          return
       }
 
-      if (!data.exists) {
-        throw new Error("Note not found");
-      }
+     if (!data.exists) {
+  console.warn("Note not found, creating new note with given ID...");
+  await createNoteWithId(id);
+  return;
+}
 
       currentNoteId = id;
 
@@ -346,9 +377,10 @@ document.addEventListener("DOMContentLoaded", () => {
       updateLineCount();
     } catch (error) {
       showStatus(error.message, "error");
-      if (error.message === "Note not found") {
-        window.location.href = "/";
-      }
+      window.location.href = "/";
+      // if (error.message === "Note not found") {
+      //   // window.location.href = "/";
+      // }
     }
   }
 
@@ -486,8 +518,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 1500);
   });
 
-  const noteContent = document.getElementById("noteContent");
-  const lineCount = document.getElementById("lineCount");
+
 
   function updateLineCount() {
     if (!noteContent || !lineCount) return;
@@ -505,17 +536,3 @@ document.addEventListener("DOMContentLoaded", () => {
   updateLineCount();
 });
 
-// const lineCount = document.getElementById("lineCount");
-
-// function updateLineCount() {
-//   const lines = noteContent.value.split("\n").length;
-//   lineCount.textContent = `${lines}/${MAX_LINES}`;
-// }
-
-// // Update line count on input and paste
-// noteContent.addEventListener("input", updateLineCount);
-// noteContent.addEventListener("paste", function () {
-//   setTimeout(updateLineCount, 0);
-// });
-
-// Call once on page load
