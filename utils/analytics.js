@@ -1,72 +1,26 @@
-const UAParser = require('ua-parser-js');
-const geoip = require('geoip-lite');
-
-/**
- * Parse user agent string to get browser, OS, and device information
- * @param {string} userAgent - The user agent string
- * @returns {Object} Parsed user agent information
- */
-function parseUserAgent(userAgent) {
-  const parser = new UAParser(userAgent);
-  const result = parser.getResult();
-
-  return {
-    browser: result.browser.name || 'Unknown',
-    os: result.os.name || 'Unknown',
-    device: result.device.type || 'Desktop'
-  };
-}
-
-/**
- * Get location information from IP address
- * @param {string} ip - The IP address
- * @returns {Object} Location information
- */
-function getLocationFromIP(ip) {
-  // Handle localhost and private IPs
-  if (ip === '::1' || ip === '127.0.0.1' || ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.')) {
-    return {
-      country: 'Local',
-      city: 'Local',
-      region: 'Local'
-    };
-  }
-
-  const geo = geoip.lookup(ip);
-  if (!geo) {
-    return {
-      country: 'Unknown',
-      city: 'Unknown',
-      region: 'Unknown'
-    };
-  }
-
-  return {
-    country: geo.country || 'Unknown',
-    city: geo.city || 'Unknown',
-    region: geo.region || 'Unknown'
-  };
-}
-
 /**
  * Get client information from request
  * @param {Object} req - Express request object
  * @returns {Object} Client information
- */
-function getClientInfo(req) {
-  const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-  const userAgent = req.headers['user-agent'];
-  const location = getLocationFromIP(ip);
-  const deviceInfo = parseUserAgent(userAgent);
+ */function getClientInfo(req) {
+  const userAgent = req.headers["user-agent"] || "";
+  let deviceType = "unknown";
+  
+  if (/mobile/i.test(userAgent)) {
+    deviceType = "mobile";
+  } else if (/tablet/i.test(userAgent)) {
+    deviceType = "tablet";
+  } else if (userAgent) {
+    deviceType = "desktop";
+  }
+
+  // Accept-Language header, fallback to unknown
+  const language = req.headers["accept-language"]?.split(",")[0] || "unknown";
 
   return {
-    ip,
-    ...location,
-    userAgent,
-    ...deviceInfo
+    deviceType,
+    language,
   };
 }
 
-module.exports = {
-  getClientInfo
-}; 
+module.exports = { getClientInfo };

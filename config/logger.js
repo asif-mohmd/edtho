@@ -11,7 +11,7 @@ const logger = winston.createLogger({
     winston.format.splat(),
     winston.format.json()
   ),
-  defaultMeta: { service: 'notepad-app' },
+  defaultMeta: { service: 'edutho notepad -' },
   transports: [
     new winston.transports.File({ 
       filename: path.join(__dirname, '../logs/error.log'), 

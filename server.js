@@ -125,6 +125,7 @@ async function trackVisit(req, res, next) {
   next();
 }
 
+
 // Apply visit tracking middleware to note-related routes
 app.use("/api/notes/:id", trackVisit);
 
@@ -420,45 +421,6 @@ app.post("/api/maintenance/cleanup", async (req, res) => {
   }
 });
 
-// Add analytics endpoint
-app.get("/api/notes/:id/analytics", async (req, res) => {
-  const { id } = req.params;
-  const adminKey = req.headers["x-admin-key"];
-
-  if (!adminKey || adminKey !== process.env.ADMIN_KEY) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
-  try {
-    const note = await Note.findOne({ id });
-    if (!note) {
-      return res.status(404).json({ error: "Note not found" });
-    }
-
-    const visits = await Visit.find({ noteId: id })
-      .sort({ createdAt: -1 })
-      .limit(100);
-
-    const analytics = {
-      totalVisits: note.visitCount,
-      lastVisited: note.lastVisitedAt,
-      recentVisits: visits.map((visit) => ({
-        timestamp: visit.createdAt,
-        action: visit.action,
-        country: visit.country,
-        city: visit.city,
-        browser: visit.browser,
-        os: visit.os,
-        device: visit.device,
-      })),
-    };
-
-    res.json(analytics);
-  } catch (error) {
-    logger.error("Error fetching analytics:", error);
-    res.status(500).json({ error: "Server error" });
-  }
-});
 
 // Serve static files for all non-API routes
 app.get(/^\/(?!api).*/, (req, res) => {
