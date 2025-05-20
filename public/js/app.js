@@ -23,6 +23,22 @@ document.addEventListener("DOMContentLoaded", () => {
   const lineCount = document.getElementById("lineCount");
   let currentNoteId = null;
 
+  const copyUrlBtn = document.getElementById("copyURL");
+
+if (copyUrlBtn) {
+  copyUrlBtn.addEventListener("click", () => {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url)
+      .then(() => {
+        showStatus("Link copied!", "success");
+      })
+      .catch(() => {
+        showStatus("Failed to copy link.", "error");
+      });
+  });
+}
+
+
   // Modal functions
   function showModal(title, section) {
     modalTitle.textContent = title;
@@ -241,7 +257,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Event Listeners
   newNoteBtn.addEventListener("click", createNewNote);
-  saveNoteBtn.addEventListener("click", saveNote);
+  // saveNoteBtn.addEventListener("click", saveNote);
 
   // Functions
   async function createNewNote() {
@@ -349,7 +365,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const response = await fetch(`/api/notes/${id}`);
       const data = await response.json();
 
-      console.log("Load note response:", data);
       if (!response.ok) {
         // throw new Error(data.error || "Failed to load note");
           await createNoteWithId(id);
@@ -366,7 +381,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // If note is password protected and not unlocked
       if (data.passwordProtected && !data.unlocked) {
-        console.log("Showing password prompt modal");
         showPasswordPromptModal(id);
         return;
       }

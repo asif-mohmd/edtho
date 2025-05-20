@@ -128,6 +128,7 @@ input:focus {
   border-color: var(--primary-color);
 }
 
+
 .status {
   position: fixed;
   top: 20px;

@@ -34,14 +34,24 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "https://platform-api.sharethis.com"
+        ],
         styleSrc: ["'self'", "'unsafe-inline'"],
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
         imgSrc: ["'self'", "data:"],
+        connectSrc: [
+          "'self'",
+          "https://l.sharethis.com"
+        ],
       },
     },
   })
 );
+
+
 
 // Rate limiting
 const apiLimiter = rateLimit({
