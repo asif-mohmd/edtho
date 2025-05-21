@@ -1,5 +1,5 @@
 {
-  "name": "Edtho - Private, Secure Online Notepad",
+  "name": "Edutho - Private, Secure Online Notepad",
   "version": "1.0.0",
   "description": "A secure and modern notepad application",
   "main": "server.js",

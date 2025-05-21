@@ -37,21 +37,16 @@ app.use(
         scriptSrc: [
           "'self'",
           "'unsafe-inline'",
-          "https://platform-api.sharethis.com"
+          "https://platform-api.sharethis.com",
         ],
         styleSrc: ["'self'", "'unsafe-inline'"],
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
         imgSrc: ["'self'", "data:"],
-        connectSrc: [
-          "'self'",
-          "https://l.sharethis.com"
-        ],
+        connectSrc: ["'self'", "https://l.sharethis.com"],
       },
     },
   })
 );
-
-
 
 // Rate limiting
 const apiLimiter = rateLimit({
@@ -97,7 +92,7 @@ function validateId(id) {
 
 // Middleware to track visits
 async function trackVisit(req, res, next) {
-  const noteId = req.params.id;
+  const noteId = req.params.id.toLowerCase();
   if (!noteId) {
     return next();
   }
@@ -135,14 +130,13 @@ async function trackVisit(req, res, next) {
   next();
 }
 
-
 // Apply visit tracking middleware to note-related routes
 app.use("/api/notes/:id", trackVisit);
 
 // API Routes
 // Create a new note
 app.post("/api/notes", async (req, res) => {
-  const { content, customPath } = req.body;
+  let { content, customPath } = req.body;
 
   // Validate input
   if (!validateNoteContent(content)) {
@@ -152,9 +146,9 @@ app.post("/api/notes", async (req, res) => {
   if (customPath && !validateId(customPath)) {
     return res.status(400).json({ error: "Invalid custom path" });
   }
-
-  const id = customPath || generateRandomId();
-
+customPath = customPath?.toLowerCase(); 
+  let id = customPath || generateRandomId();
+  id = id.toLowerCase(); // Ensure ID is lowercase
   try {
     // Check if custom path already exists
     if (customPath) {
@@ -183,7 +177,7 @@ app.post("/api/notes", async (req, res) => {
 
 // Get a note
 app.get("/api/notes/:id", async (req, res) => {
-  const { id } = req.params;
+  const id = req.params.id.toLowerCase();
 
   if (!validateId(id)) {
     return res.status(400).json({ error: "Invalid ID format" });
@@ -224,7 +218,7 @@ app.get("/api/notes/:id", async (req, res) => {
 
 // Update a note
 app.put("/api/notes/:id", async (req, res) => {
-  const { id } = req.params;
+  const id = req.params.id.toLowerCase();
   const { content } = req.body;
 
   if (!validateId(id)) {
@@ -264,8 +258,8 @@ app.put("/api/notes/:id", async (req, res) => {
 
 // Update note slug (custom URL)
 app.put("/api/notes/:id/slug", async (req, res) => {
-  const { id } = req.params;
-  const { newSlug } = req.body;
+  const id = req.params.id.toLowerCase();
+  const newSlug = req.body.newSlug?.toLowerCase();
 
   if (!validateId(id) || !validateId(newSlug)) {
     return res.status(400).json({ error: "Invalid ID format" });
@@ -299,7 +293,7 @@ app.put("/api/notes/:id/slug", async (req, res) => {
 // Set note password
 // Update the password setting route
 app.post("/api/notes/:id/password", async (req, res) => {
-  const { id } = req.params;
+  const id = req.params.id.toLowerCase();
   const { password } = req.body;
 
   if (!validateId(id)) {
@@ -343,7 +337,7 @@ app.post("/api/notes/:id/password", async (req, res) => {
 
 // Unlock a note
 app.post("/api/notes/:id/unlock", async (req, res) => {
-  const { id } = req.params;
+  const id = req.params.id.toLowerCase();
   const { password } = req.body;
 
   if (!validateId(id)) {
@@ -430,7 +424,6 @@ app.post("/api/maintenance/cleanup", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
-
 
 // Serve static files for all non-API routes
 app.get(/^\/(?!api).*/, (req, res) => {
