@@ -26,6 +26,27 @@ body {
   padding: 20px;
 }
 
+@media (max-width: 768px) {
+ 
+
+  .headText{
+    font-size: 20px;
+  }
+
+  .btn {
+    font-size: 9px;
+    padding: 8px 12px;
+    /* white-space: nowrap; */
+  }
+
+}
+
+
+
+
+
+
+
 header {
   display: flex;
   justify-content: space-between;
