@@ -426,7 +426,17 @@ app.post("/api/maintenance/cleanup", async (req, res) => {
 });
 
 // Serve static files for all non-API routes
-app.get(/^\/(?!api\/.+$).+|^\/api\/?$/, (req, res) => {
+app.get(/^\/(?!api\/.+$).+|^\/api\/?$/, (req, res, next) => {
+  const excludedPaths = ['/privacy', '/terms', '/contact', '/about'];
+  const reqPath = req.path.toLowerCase();
+
+    if (excludedPaths.includes(reqPath)) {
+    // Serve a different HTML file for these specific routes
+    return res.sendFile(path.join(__dirname, "public", `${reqPath.substring(1)}.html`));
+    // This assumes you have privacy.html, terms.html, contact.html, about.html in your public folder
+  }
+
+
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
