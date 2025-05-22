@@ -574,3 +574,38 @@ input:focus {
   white-space: nowrap; /* Prevent line breaks */
   border: 0;
 }
+
+
+
+
+
+.site-footer {
+  width: 100%;
+  padding: 15px 0;
+  background-color: #f9f9f9; /* light background */
+  text-align: center;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  font-weight: 600;
+  font-family: 'Roboto', sans-serif; 
+  font-size: 13px;
+  color: #888888; /* grey color */
+  border-top: 1px solid #ddd;
+  z-index: 1000;
+}
+
+.footer-nav a {
+  color: #c5c3c3;
+  text-decoration: none;
+  margin: 0 8px;
+  transition: color 0.3s ease;
+}
+
+.footer-nav a:hover {
+  color: #7e7d7d;
+}
+
+.footer-nav span {
+  color: #bebdbd;
+}

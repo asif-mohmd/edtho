@@ -108,13 +108,13 @@ async function trackVisit(req, res, next) {
         ? "create"
         : "unlock";
 
-    const visit = new Visit({
-      noteId,
-      ...clientInfo,
-      action,
-    });
+    // const visit = new Visit({
+    //   noteId,
+    //   ...clientInfo,
+    //   action,
+    // });
 
-    await visit.save();
+    // await visit.save();
 
     // Update note's visit count and last visited timestamp
     await Note.findOneAndUpdate(
@@ -402,7 +402,7 @@ app.get("/api/stats", async (req, res) => {
   }
 });
 
-// Cleanup expired notes (could be run as a cron job)
+// Cleanup notes which is not used for last one year (could be run as a cron job)
 app.post("/api/maintenance/cleanup", async (req, res) => {
   const adminKey = req.headers["x-admin-key"];
 
@@ -412,7 +412,7 @@ app.post("/api/maintenance/cleanup", async (req, res) => {
 
   try {
     const result = await Note.deleteMany({
-      createdAt: { $lt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) },
+      lastVisitedAt: { $lt: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) }
     });
 
     res.json({
@@ -426,7 +426,7 @@ app.post("/api/maintenance/cleanup", async (req, res) => {
 });
 
 // Serve static files for all non-API routes
-app.get(/^\/(?!api).*/, (req, res) => {
+app.get(/^\/(?!api\/.+$).+|^\/api\/?$/, (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
@@ -467,5 +467,20 @@ cron.schedule("0 4 * * *", async () => {
     logger.error("Cronjob error deleting empty notes:", error);
   }
 });
+
+cron.schedule("30 4 * * *", async () => {
+  try {
+    const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+
+    const result = await Note.deleteMany({
+      lastVisitedAt: { $lt: oneYearAgo },
+    });
+
+    logger.info(`Cronjob: Deleted ${result.deletedCount} notes not visited in over a year at 4:30 AM`);
+  } catch (error) {
+    logger.error("Cronjob error deleting old notes:", error);
+  }
+});
+
 
 module.exports = app; // For testing
