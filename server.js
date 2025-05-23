@@ -427,7 +427,7 @@ app.post("/api/maintenance/cleanup", async (req, res) => {
 
 // Serve static files for all non-API routes
 app.get(/^\/(?!api\/.+$).+|^\/api\/?$/, (req, res, next) => {
-  const excludedPaths = ['/privacy', '/terms', '/contact', '/about'];
+  const excludedPaths = ['/privacy', '/terms', '/contact', '/about','/robots.txt', '/sitemap.xml'];
   const reqPath = req.path.toLowerCase();
 
     if (excludedPaths.includes(reqPath)) {
