@@ -23,6 +23,7 @@ const {
   decryptContent,
 } = require("./utils/cryptoValidator");
 const Visit = require("./models/Visit");
+const JobLog = require("./models/JobLog");
 // const { cryptoEncrypt, cryptoDecrypt } = require("./utils/cryptoValidator");
 
 // Connect to MongoDB
@@ -37,12 +38,38 @@ app.use(
         scriptSrc: [
           "'self'",
           "'unsafe-inline'",
+          "https://pagead2.googlesyndication.com",
+          "https://www.googletagservices.com",
+          "https://www.googletagmanager.com",
+          "https://www.google-analytics.com",
           "https://platform-api.sharethis.com",
+          "https://buttons-config.sharethis.com",
         ],
-        styleSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
-        imgSrc: ["'self'", "data:"],
-        connectSrc: ["'self'", "https://l.sharethis.com"],
+        imgSrc: [
+          "'self'",
+          "data:",
+          "https://platform-cdn.sharethis.com",
+          "https://*.googlesyndication.com",
+          "https://*.doubleclick.net",
+          "https://*.sharethis.com",
+          "https://www.google.com",
+        ],
+        connectSrc: [
+          "'self'",
+          "https://l.sharethis.com",
+          "https://datasphere-sbsvc.sharethis.com",
+          "https://www.google-analytics.com",
+          "https://region1.google-analytics.com",
+          "https://www.googletagmanager.com",
+          "https://googleads.g.doubleclick.net",
+        ],
+        frameSrc: [
+          "'self'",
+          "https://googleads.g.doubleclick.net",
+          "https://tpc.googlesyndication.com",
+        ],
       },
     },
   })
@@ -146,7 +173,7 @@ app.post("/api/notes", async (req, res) => {
   if (customPath && !validateId(customPath)) {
     return res.status(400).json({ error: "Invalid custom path" });
   }
-customPath = customPath?.toLowerCase(); 
+  customPath = customPath?.toLowerCase();
   let id = customPath || generateRandomId();
   id = id.toLowerCase(); // Ensure ID is lowercase
   try {
@@ -412,7 +439,7 @@ app.post("/api/maintenance/cleanup", async (req, res) => {
 
   try {
     const result = await Note.deleteMany({
-      lastVisitedAt: { $lt: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) }
+      lastVisitedAt: { $lt: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) },
     });
 
     res.json({
@@ -427,15 +454,23 @@ app.post("/api/maintenance/cleanup", async (req, res) => {
 
 // Serve static files for all non-API routes
 app.get(/^\/(?!api\/.+$).+|^\/api\/?$/, (req, res, next) => {
-  const excludedPaths = ['/privacy', '/terms', '/contact', '/about','/robots.txt', '/sitemap.xml'];
+  const excludedPaths = [
+    "/privacy",
+    "/terms",
+    "/contact",
+    "/about",
+    "/robots.txt",
+    "/sitemap.xml",
+  ];
   const reqPath = req.path.toLowerCase();
 
-    if (excludedPaths.includes(reqPath)) {
+  if (excludedPaths.includes(reqPath)) {
     // Serve a different HTML file for these specific routes
-    return res.sendFile(path.join(__dirname, "public", `${reqPath.substring(1)}.html`));
+    return res.sendFile(
+      path.join(__dirname, "public", `${reqPath.substring(1)}.html`)
+    );
     // This assumes you have privacy.html, terms.html, contact.html, about.html in your public folder
   }
-
 
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
@@ -472,6 +507,12 @@ cron.schedule("0 4 * * *", async () => {
     const result = await Note.deleteMany({
       $or: [{ content: null }, { content: "" }],
     });
+
+      await JobLog.create({
+      jobName: "delete-empty-notes",
+      totalCount: result.deletedCount,
+    });
+
     logger.info(`Cronjob: Deleted ${result.deletedCount} empty notes at 4 AM`);
   } catch (error) {
     logger.error("Cronjob error deleting empty notes:", error);
@@ -486,11 +527,17 @@ cron.schedule("30 4 * * *", async () => {
       lastVisitedAt: { $lt: oneYearAgo },
     });
 
-    logger.info(`Cronjob: Deleted ${result.deletedCount} notes not visited in over a year at 4:30 AM`);
+     await JobLog.create({
+      jobName: "delete-old-notes",
+      totalCount: result.deletedCount,
+    });
+
+    logger.info(
+      `Cronjob: Deleted ${result.deletedCount} notes not visited in over a year at 4:30 AM`
+    );
   } catch (error) {
     logger.error("Cronjob error deleting old notes:", error);
   }
 });
 
-
-module.exports = app; // For testing
+module.exports = app;
