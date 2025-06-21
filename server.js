@@ -89,6 +89,14 @@ app.use(bodyParser.json());
 app.use(bodyParser.json({ limit: "5mb" }));
 app.use(express.static("public"));
 
+app.use((req, res, next) => {
+  if (req.path.startsWith("/note/")) {
+    res.setHeader("X-Robots-Tag", "noindex, nofollow");
+  }
+  next();
+});
+
+
 // Generate a random ID for notes
 function generateRandomId(length = 8) {
   return crypto
