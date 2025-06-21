@@ -1,4 +1,7 @@
 User-agent: *
-Disallow:
+Allow: /
+
+Disallow: /note/
+Disallow: /api/
 
 Sitemap: https://edutho.in/sitemap.xml
