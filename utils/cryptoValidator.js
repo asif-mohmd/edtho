@@ -188,6 +188,19 @@ function decryptContent(encryptedContent) {
   }
 }
 
+
+function encryptNoteId(id) {
+  if (!id || typeof id !== 'string') throw new Error('Invalid note ID');
+
+  const hmac = crypto.createHmac('sha256', CRYPTO_ACCESS_TOKEN_KEY);
+  hmac.update(id.toLowerCase());
+
+  const fullDigest = hmac.digest(); 
+  const truncated = fullDigest.slice(0, 9);
+  return truncated.toString('base64url');
+}
+
+
 module.exports = {
   cryptoEncrypt,
   cryptoDecrypt,
@@ -195,5 +208,6 @@ module.exports = {
   comparePassword,
   validatePasswordStrength,
   encryptContent,
-  decryptContent
+  decryptContent,
+  encryptNoteId
 };

@@ -21,6 +21,7 @@ const {
   validatePasswordStrength,
   encryptContent,
   decryptContent,
+  encryptNoteId,
 } = require("./utils/cryptoValidator");
 const Visit = require("./models/Visit");
 const JobLog = require("./models/JobLog");
@@ -132,16 +133,17 @@ async function trackVisit(req, res, next) {
     return next();
   }
 
+   let encryptId = encryptNoteId(noteId)
   try {
-    const clientInfo = getClientInfo(req);
-    const action =
-      req.method === "GET"
-        ? "view"
-        : req.method === "PUT"
-        ? "edit"
-        : req.method === "POST"
-        ? "create"
-        : "unlock";
+    // const clientInfo = getClientInfo(req);
+    // const action =
+    //   req.method === "GET"
+    //     ? "view"
+    //     : req.method === "PUT"
+    //     ? "edit"
+    //     : req.method === "POST"
+    //     ? "create"
+    //     : "unlock";
 
     // const visit = new Visit({
     //   noteId,
@@ -152,13 +154,15 @@ async function trackVisit(req, res, next) {
     // await visit.save();
 
     // Update note's visit count and last visited timestamp
+    if(req.method === "GET"){
     await Note.findOneAndUpdate(
-      { id: noteId },
+      { id: encryptId },
       {
         $inc: { visitCount: 1 },
         lastVisitedAt: new Date(),
       }
     );
+  }
   } catch (error) {
     logger.error("Error tracking visit:", error);
   }
@@ -184,10 +188,12 @@ app.post("/api/notes", async (req, res) => {
   customPath = customPath?.toLowerCase();
   let id = customPath || generateRandomId();
   id = id.toLowerCase(); // Ensure ID is lowercase
+
   try {
+    let encryptId = encryptNoteId(id)
     // Check if custom path already exists
     if (customPath) {
-      const existingNote = await Note.findOne({ id: customPath });
+      const existingNote = await Note.findOne({ id: encryptId });
       if (existingNote) {
         return res.status(400).json({ error: "Custom URL already taken" });
       }
@@ -198,7 +204,7 @@ app.post("/api/notes", async (req, res) => {
 
     // Create new note
     const note = new Note({
-      id,
+      id:encryptId,
       content: encryptedContent,
     });
 
@@ -219,7 +225,8 @@ app.get("/api/notes/:id", async (req, res) => {
   }
 
   try {
-    const note = await Note.findOne({ id });
+     let encryptId = encryptNoteId(id)
+    const note = await Note.findOne({ id:encryptId });
 
     if (!note) {
       return res.status(404).json({ error: "Note not found" });
@@ -228,7 +235,7 @@ app.get("/api/notes/:id", async (req, res) => {
     // Check if note is password protected
     if (note.password) {
       return res.json({
-        id: note.id,
+        id,
         exists: true,
         passwordProtected: true,
         unlocked: false,
@@ -239,7 +246,7 @@ app.get("/api/notes/:id", async (req, res) => {
     // If no password, decrypt and return the content
     const decryptedContent = decryptContent(note.content);
     res.json({
-      id: note.id,
+      id,
       exists: true,
       passwordProtected: false,
       unlocked: true,
@@ -260,13 +267,15 @@ app.put("/api/notes/:id", async (req, res) => {
     return res.status(400).json({ error: "Invalid ID format" });
   }
 
+  let encryptId = encryptNoteId(id)
+
   if (!validateNoteContent(content)) {
     return res.status(400).json({ error: "Invalid content" });
   }
 
   try {
     // Check if note exists and is password protected
-    const existingNote = await Note.findOne({ id });
+    const existingNote = await Note.findOne({ id:encryptId });
     if (!existingNote) {
       return res.status(404).json({ error: "Note not found" });
     }
@@ -279,7 +288,7 @@ app.put("/api/notes/:id", async (req, res) => {
     const encryptedContent = encryptContent(content);
 
     const note = await Note.findOneAndUpdate(
-      { id },
+      { id:encryptId },
       { content: encryptedContent },
       { new: true }
     );
@@ -301,16 +310,18 @@ app.put("/api/notes/:id/slug", async (req, res) => {
   }
 
   try {
+    let encryptId = encryptNoteId(id)
+    let newEncryptedSlug = encryptContent(newSlug)
     // Check if newSlug already exists
-    const existingNote = await Note.findOne({ id: newSlug });
+    const existingNote = await Note.findOne({ id: newEncryptedSlug });
     if (existingNote) {
       return res.status(400).json({ error: "Custom URL already taken" });
     }
 
     // Update the note's ID (slug)
     const note = await Note.findOneAndUpdate(
-      { id },
-      { id: newSlug },
+      { id: encryptId },
+      { id: newEncryptedSlug },
       { new: true }
     );
 
@@ -335,6 +346,8 @@ app.post("/api/notes/:id/password", async (req, res) => {
     return res.status(400).json({ error: "Invalid ID format" });
   }
 
+   let encryptId = encryptNoteId(id)
+
   if (!password || typeof password !== "string" || password.length < 4) {
     return res
       .status(400)
@@ -342,7 +355,7 @@ app.post("/api/notes/:id/password", async (req, res) => {
   }
 
   try {
-    const note = await Note.findOne({ id });
+    const note = await Note.findOne({ id:encryptId });
 
     if (!note) {
       return res.status(404).json({ error: "Note not found" });
@@ -351,7 +364,7 @@ app.post("/api/notes/:id/password", async (req, res) => {
     const hashedPassword = await hashPassword(password);
 
     const updatedNote = await Note.findOneAndUpdate(
-      { id },
+      { id:encryptId },
       { password: hashedPassword },
       { new: true }
     );
@@ -374,17 +387,17 @@ app.post("/api/notes/:id/password", async (req, res) => {
 app.post("/api/notes/:id/unlock", async (req, res) => {
   const id = req.params.id.toLowerCase();
   const { password } = req.body;
-
   if (!validateId(id)) {
     return res.status(400).json({ error: "Invalid ID format" });
   }
+  let encryptId = encryptNoteId(id)
 
   if (!password || typeof password !== "string") {
     return res.status(400).json({ error: "Please enter a password" });
   }
 
   try {
-    const note = await Note.findOne({ id });
+    const note = await Note.findOne({ id:encryptId });
 
     if (!note) {
       return res.status(404).json({ error: "Note not found" });
@@ -406,7 +419,7 @@ app.post("/api/notes/:id/unlock", async (req, res) => {
 
     // Note unlocked successfully
     res.json({
-      id: note.id,
+      id: id,
       content: decryptedContent,
       passwordProtected: true,
       unlocked: true,
